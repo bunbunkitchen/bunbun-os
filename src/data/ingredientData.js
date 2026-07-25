@@ -1,0 +1,38 @@
+export const ingredientData = [
+  {
+    kode: "RM-001",
+    nama: "Tepung Protein Tinggi",
+    kategori: "Tepung",
+    satuan: "kg",
+    harga: 14500,
+    minimumStok: 25,
+    status: "Aktif",
+  },
+  {
+    kode: "RM-002",
+    nama: "Tepung Protein Sedang",
+    kategori: "Tepung",
+    satuan: "kg",
+    harga: 13500,
+    minimumStok: 10,
+    status: "Aktif",
+  },
+  {
+    kode: "RM-003",
+    nama: "Butter",
+    kategori: "Susu & Dairy",
+    satuan: "kg",
+    harga: 185000,
+    minimumStok: 5,
+    status: "Aktif",
+  },
+  {
+    kode: "RM-004",
+    nama: "Ragi",
+    kategori: "Ragi",
+    satuan: "gram",
+    harga: 85000,
+    minimumStok: 500,
+    status: "Aktif",
+  },
+];
