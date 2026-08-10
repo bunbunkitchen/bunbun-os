@@ -93,17 +93,13 @@ export function exportReportToExcel(report) {
    */
   const incomeRows = report.incomes.map(
     (item) => ({
-      Tanggal: item.tanggal,
-      "Total Penjualan": Number(
+      "Tanggal Setoran": item.tanggal,
+      "Asal Setoran": item.asalSetoran || "-",
+      "Kode Lot": item.kodeLot || "-",
+      "Nominal Setoran Aktual": Number(
         item.totalPenjualan
       ),
-      "Persentase Bunbun": Number(
-        item.persentaseBunbun
-      ),
-      "Pemasukan Bunbun": Number(
-        item.pemasukanBunbun
-      ),
-      Keterangan: item.keterangan || "",
+      Catatan: item.keterangan || "",
     })
   );
 
@@ -112,8 +108,20 @@ export function exportReportToExcel(report) {
 
   setColumnWidths(
     incomeSheet,
-    [14, 20, 20, 22, 35]
+    [16, 28, 32, 24, 40]
   );
+
+  for (
+    let row = 2;
+    row <= incomeRows.length + 1;
+    row += 1
+  ) {
+    const cell = incomeSheet[`D${row}`];
+
+    if (cell) {
+      cell.z = '"Rp"#,##0';
+    }
+  }
 
   XLSX.utils.book_append_sheet(
     workbook,
@@ -353,27 +361,35 @@ export function exportReportToPdf(report) {
     startY: 24,
     head: [
       [
-        "Tanggal",
-        "Total Penjualan",
-        "Pemasukan Bunbun",
-        "Keterangan",
+        "Tanggal Setoran",
+        "Asal Setoran",
+        "Kode Lot",
+        "Nominal Setoran Aktual",
+        "Catatan",
       ],
     ],
     body: report.incomes.map(
       (item) => [
         formatDateForPdf(item.tanggal),
+        item.asalSetoran || "-",
+        item.kodeLot || "-",
         formatRupiah(
           item.totalPenjualan
-        ),
-        formatRupiah(
-          item.pemasukanBunbun
         ),
         item.keterangan || "-",
       ]
     ),
     theme: "grid",
     styles: {
-      fontSize: 8,
+      fontSize: 7,
+      overflow: "linebreak",
+    },
+    columnStyles: {
+      0: { cellWidth: 23 },
+      1: { cellWidth: 34 },
+      2: { cellWidth: 42 },
+      3: { cellWidth: 34, halign: "right" },
+      4: { cellWidth: 48 },
     },
   });
 
