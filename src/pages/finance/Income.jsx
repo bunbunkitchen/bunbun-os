@@ -198,29 +198,22 @@ export default function Income() {
       title: "Tanggal",
     },
     {
+      key: "asalSetoran",
+      title: "Asal Setoran",
+    },
+    {
+      key: "kodeLot",
+      title: "Kode Lot",
+      render: (income) =>
+        income.kodeLot || "-",
+    },
+    {
       key: "totalPenjualan",
-      title: "Total Penjualan",
+      title: "Setoran Diterima",
       render: (income) => (
         <Currency
           value={
             income.totalPenjualan
-          }
-        />
-      ),
-    },
-    {
-      key: "persentaseBunbun",
-      title: "Bagian Bunbun",
-      render: (income) =>
-        `${income.persentaseBunbun}%`,
-    },
-    {
-      key: "pemasukanBunbun",
-      title: "Pemasukan Bunbun",
-      render: (income) => (
-        <Currency
-          value={
-            income.pemasukanBunbun
           }
         />
       ),
@@ -292,9 +285,9 @@ export default function Income() {
 
       <MasterPage
         title="Pemasukan"
-        subtitle="Catat bagian Bunbun Kitchen dari hasil penjualan"
+        subtitle="Catat nominal setoran aktual dari kafe, event, atau sumber lainnya"
         sectionTitle="Daftar Pemasukan"
-        sectionDescription="Persentase pemasukan mengikuti pengaturan Bunbun Kitchen"
+        sectionDescription="Setoran dicatat sesuai uang yang diterima, tanpa perhitungan persentase"
         searchPlaceholder="Cari pemasukan..."
         addButtonText="+ Tambah Pemasukan"
         columns={columns}

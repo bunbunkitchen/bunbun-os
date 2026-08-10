@@ -1,16 +1,8 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 
 import Input from "../ui/Input";
 import Button from "../ui/Button";
-import Currency from "../ui/Currency";
-
-import {
-  getSettings,
-} from "../../services/settingsService";
+import { getAvailableIncomeLots } from "../../services/incomeService";
 
 export default function IncomeForm({
   onSave,
@@ -26,50 +18,25 @@ export default function IncomeForm({
     totalPenjualan:
       initialData?.totalPenjualan?.toString() ||
       "",
+    asalSetoran:
+      initialData?.asalSetoran || "",
+    kodeLot:
+      initialData?.kodeLot || "",
     keterangan:
-      initialData?.keterangan ||
-      "Penjualan harian",
+      initialData?.keterangan || "",
   });
-
-  const [settings, setSettings] =
-    useState(null);
-
-  const [
-    loadingSettings,
-    setLoadingSettings,
-  ] = useState(true);
 
   const [formError, setFormError] =
     useState("");
 
+  const [lotOptions, setLotOptions] =
+    useState([]);
+
+  const [loadingLots, setLoadingLots] =
+    useState(true);
+
   const [errors, setErrors] =
     useState({});
-
-  useEffect(() => {
-    async function loadSettings() {
-      try {
-        setFormError("");
-
-        const data = await getSettings();
-
-        setSettings(data);
-      } catch (error) {
-        console.error(
-          "Gagal memuat settings pemasukan:",
-          error
-        );
-
-        setFormError(
-          error.message ||
-            "Persentase bagian Bunbun gagal dimuat."
-        );
-      } finally {
-        setLoadingSettings(false);
-      }
-    }
-
-    loadSettings();
-  }, []);
 
   useEffect(() => {
     if (!initialData) {
@@ -82,29 +49,46 @@ export default function IncomeForm({
       totalPenjualan:
         initialData.totalPenjualan?.toString() ||
         "",
+      asalSetoran:
+        initialData.asalSetoran || "",
+      kodeLot:
+        initialData.kodeLot || "",
       keterangan:
-        initialData.keterangan ||
-        "Penjualan harian",
+        initialData.keterangan || "",
     });
   }, [initialData]);
 
-  const persentaseBunbun =
-    settings?.bunbunPercentage ??
-    initialData?.persentaseBunbun ??
-    70;
+  useEffect(() => {
+    let active = true;
 
-  const pemasukanBunbun = useMemo(() => {
-    const total =
-      Number(form.totalPenjualan) || 0;
+    async function loadLots() {
+      try {
+        const lots = await getAvailableIncomeLots();
 
-    return (
-      total *
-      (Number(persentaseBunbun) / 100)
-    );
-  }, [
-    form.totalPenjualan,
-    persentaseBunbun,
-  ]);
+        if (active) {
+          setLotOptions(lots);
+        }
+      } catch (error) {
+        console.error("Gagal mengambil pilihan lot:", error);
+
+        if (active) {
+          setFormError(
+            "Pilihan kode lot gagal dimuat. Tutup form lalu coba lagi."
+          );
+        }
+      } finally {
+        if (active) {
+          setLoadingLots(false);
+        }
+      }
+    }
+
+    loadLots();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function handleChange(field, value) {
     setForm((previous) => ({
@@ -130,12 +114,17 @@ export default function IncomeForm({
 
     if (!form.totalPenjualan) {
       newErrors.totalPenjualan =
-        "Total penjualan wajib diisi";
+        "Nominal setoran wajib diisi";
     } else if (
       Number(form.totalPenjualan) <= 0
     ) {
       newErrors.totalPenjualan =
-        "Total penjualan harus lebih dari 0";
+        "Nominal setoran harus lebih dari 0";
+    }
+
+    if (!form.asalSetoran.trim()) {
+      newErrors.asalSetoran =
+        "Asal setoran wajib diisi";
     }
 
     setErrors(newErrors);
@@ -150,13 +139,6 @@ export default function IncomeForm({
       return;
     }
 
-    if (!settings) {
-      setFormError(
-        "Pengaturan persentase Bunbun belum tersedia."
-      );
-      return;
-    }
-
     try {
       setFormError("");
 
@@ -165,13 +147,15 @@ export default function IncomeForm({
         totalPenjualan: Number(
           form.totalPenjualan
         ),
-        persentaseBunbun: Number(
-          persentaseBunbun
+        persentaseBunbun: 100,
+        pemasukanBunbun: Number(
+          form.totalPenjualan
         ),
-        pemasukanBunbun,
+        asalSetoran: form.asalSetoran.trim(),
+        kodeLot: form.kodeLot.trim(),
         keterangan:
           form.keterangan.trim() ||
-          "Penjualan harian",
+          "-",
       });
     } catch (error) {
       console.error(
@@ -233,7 +217,7 @@ export default function IncomeForm({
           <Input
             type="number"
             min="0"
-            placeholder="Total Penjualan Cafe"
+            placeholder="Nominal Setoran Diterima"
             value={form.totalPenjualan}
             onChange={(event) =>
               handleChange(
@@ -251,7 +235,55 @@ export default function IncomeForm({
 
         <div>
           <Input
-            placeholder="Keterangan"
+            placeholder="Asal Setoran (contoh: Sewangi Cafe / Event RS)"
+            value={form.asalSetoran}
+            onChange={(event) =>
+              handleChange(
+                "asalSetoran",
+                event.target.value
+              )
+            }
+            disabled={saving}
+          />
+
+          {renderError("asalSetoran")}
+        </div>
+
+        <div>
+          <select
+            value={form.kodeLot}
+            onChange={(event) =>
+              handleChange(
+                "kodeLot",
+                event.target.value
+              )
+            }
+            disabled={saving || loadingLots}
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-amber-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+          >
+            <option value="">
+              {loadingLots
+                ? "Memuat kode lot..."
+                : "Pilih kode lot (opsional)"}
+            </option>
+
+            {lotOptions.map((lot) => (
+              <option
+                key={lot.kodeLot}
+                value={lot.kodeLot}
+              >
+                {lot.kodeLot}
+                {lot.productNama
+                  ? ` — ${lot.productNama}`
+                  : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <Input
+            placeholder="Catatan (opsional)"
             value={form.keterangan}
             onChange={(event) =>
               handleChange(
@@ -264,41 +296,17 @@ export default function IncomeForm({
         </div>
       </div>
 
-      <div className="mt-6 rounded-xl bg-stone-100 p-4">
-        <p className="text-sm text-gray-500">
-          Bagian Bunbun Kitchen
-        </p>
-
-        <p className="mt-1 text-sm font-semibold text-gray-700">
-          {loadingSettings
-            ? "Memuat persentase..."
-            : `${persentaseBunbun}% dari total penjualan`}
-        </p>
-
-        <p className="mt-3 text-2xl font-bold text-amber-700">
-          <Currency
-            value={pemasukanBunbun}
-          />
-        </p>
-      </div>
-
       <div className="mt-6 flex justify-end gap-3">
         <Button
           onClick={onCancel}
-          disabled={
-            loadingSettings || saving
-          }
+          disabled={saving}
         >
           Batal
         </Button>
 
         <Button
           onClick={handleSubmit}
-          disabled={
-            loadingSettings ||
-            !settings ||
-            saving
-          }
+          disabled={saving}
         >
           {saving
             ? "Menyimpan..."

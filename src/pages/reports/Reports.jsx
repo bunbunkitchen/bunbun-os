@@ -197,20 +197,21 @@ function handleExportPdf() {
       title: "Tanggal",
     },
     {
+      key: "asalSetoran",
+      title: "Asal Setoran",
+    },
+    {
+      key: "kodeLot",
+      title: "Kode Lot",
+      render: (item) =>
+        item.kodeLot || "-",
+    },
+    {
       key: "totalPenjualan",
-      title: "Total Penjualan",
+      title: "Setoran Diterima",
       render: (item) => (
         <Currency
           value={item.totalPenjualan}
-        />
-      ),
-    },
-    {
-      key: "pemasukanBunbun",
-      title: "Pemasukan Bunbun",
-      render: (item) => (
-        <Currency
-          value={item.pemasukanBunbun}
         />
       ),
     },
