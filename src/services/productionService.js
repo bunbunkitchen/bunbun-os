@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { generateBatchNumber } from "../utils/batchGenerator";
+import { invokeFrozenFlowRpc } from "./productStockService";
 
 const ORDER_TABLE = "production_orders";
 const BATCH_TABLE = "production_batches";
@@ -45,6 +46,10 @@ function mapBatch(row) {
       row.production_orders?.recipes
         ?.yield_qty || 0
     ),
+
+    productId:
+      row.production_orders?.recipes
+        ?.product_id ?? null,
 
     target: Number(row.target),
     selesai: Number(row.selesai),
@@ -263,7 +268,8 @@ export async function generateBatchFromOrder(order) {
         recipes (
           kode,
           nama,
-          yield_qty
+          yield_qty,
+          product_id
         )
       )
     `)
@@ -301,7 +307,8 @@ export async function getAllProductionBatches() {
         recipes (
             kode,
             nama,
-            yield_qty
+            yield_qty,
+            product_id
         )
       )
     `)
@@ -351,7 +358,8 @@ export async function updateProductionBatch(
         recipes (
           kode,
           nama,
-          yield_qty
+          yield_qty,
+          product_id
         )
       )
     `)
@@ -362,4 +370,74 @@ export async function updateProductionBatch(
   }
 
   return mapBatch(data);
+}
+
+export async function recordShapingSplit({
+  productionBatchId,
+  productId,
+  frozenQty = 0,
+  directQty = 0,
+  rejectQty = 0,
+  frozenLotCode,
+  movementDate,
+  operationKey,
+}) {
+  return invokeFrozenFlowRpc(
+    "record_shaping_split",
+    {
+      p_production_batch_id: Number(
+        productionBatchId
+      ),
+      p_product_id: Number(productId),
+      p_frozen_qty: Number(frozenQty),
+      p_direct_qty: Number(directQty),
+      p_reject_qty: Number(rejectQty),
+      p_frozen_lot_code:
+        Number(frozenQty) > 0
+          ? (frozenLotCode || "__AUTO__")
+          : null,
+      p_movement_date: movementDate,
+    },
+    operationKey
+  );
+}
+
+export async function releaseFrozenStockForProofing({
+  frozenSplitId,
+  qty,
+  movementDate,
+  operationKey,
+}) {
+  return invokeFrozenFlowRpc(
+    "release_frozen_stock",
+    {
+      p_frozen_split_id: Number(frozenSplitId),
+      p_qty: Number(qty),
+      p_movement_date: movementDate,
+    },
+    operationKey
+  );
+}
+
+export async function recordBakingResult({
+  directSplitId,
+  bakedGoodQty,
+  bakedRejectQty,
+  movementDate,
+  operationKey,
+}) {
+  return invokeFrozenFlowRpc(
+    "record_baking_result",
+    {
+      p_direct_split_id: Number(directSplitId),
+      p_baked_good_qty: Number(
+        bakedGoodQty
+      ),
+      p_baked_reject_qty: Number(
+        bakedRejectQty
+      ),
+      p_movement_date: movementDate,
+    },
+    operationKey
+  );
 }

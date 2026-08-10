@@ -1,0 +1,220 @@
+import { useCallback, useEffect, useState } from "react";
+
+import FrozenReleaseForm from "../../components/forms/FrozenReleaseForm";
+import FinishedProductReleaseForm from "../../components/forms/FinishedProductReleaseForm";
+import ProductionResultForm from "../../components/forms/ProductionResultForm";
+import Modal from "../../components/modal/Modal";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import LoadingState from "../../components/ui/LoadingState";
+import PageTitle from "../../components/ui/PageTitle";
+import StatusBadge from "../../components/ui/StatusBadge";
+import { useToast } from "../../context/ToastContext";
+import {
+  getAvailableFrozenLots,
+  getFinishedProductBalances,
+  getFrozenProcessingSplits,
+  getProductStockErrorMessage,
+  recordCafeDeposit,
+} from "../../services/productStockService";
+import {
+  recordBakingResult,
+  releaseFrozenStockForProofing,
+} from "../../services/productionService";
+
+function getLocalDate() {
+  const now = new Date();
+  const timezoneOffset = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10);
+}
+
+export default function ProductStock() {
+  const toast = useToast();
+  const [frozenLots, setFrozenLots] = useState([]);
+  const [processingSplits, setProcessingSplits] = useState([]);
+  const [finishedBalances, setFinishedBalances] = useState([]);
+  const [releaseLot, setReleaseLot] = useState(null);
+  const [bakingSplit, setBakingSplit] = useState(null);
+  const [finishedRelease, setFinishedRelease] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+
+  const loadData = useCallback(async () => {
+    const [lots, processing, finished] = await Promise.all([
+      getAvailableFrozenLots(),
+      getFrozenProcessingSplits(),
+      getFinishedProductBalances(),
+    ]);
+    setFrozenLots(lots);
+    setProcessingSplits(processing);
+    setFinishedBalances(finished.filter((item) => item.saldo !== 0));
+  }, []);
+
+  useEffect(() => {
+    loadData()
+      .catch((error) => setPageError(getProductStockErrorMessage(error)))
+      .finally(() => setLoading(false));
+  }, [loadData]);
+
+  async function handleRelease(values) {
+    try {
+      await releaseFrozenStockForProofing({
+        frozenSplitId: releaseLot.lotId,
+        qty: values.qty,
+        movementDate: getLocalDate(),
+        operationKey: values.operationKey,
+      });
+      await loadData();
+      setReleaseLot(null);
+      toast.success("Frozen berhasil dikeluarkan ke proofing.");
+    } catch (error) {
+      const message = getProductStockErrorMessage(error);
+      setPageError(message);
+      toast.error(message);
+    }
+  }
+
+  async function handleBaking(values) {
+    try {
+      await recordBakingResult({
+        directSplitId: bakingSplit.id,
+        bakedGoodQty: values.goodQty,
+        bakedRejectQty: values.rejectQty,
+        movementDate: getLocalDate(),
+        operationKey: values.operationKey,
+      });
+      await loadData();
+      setBakingSplit(null);
+      toast.success("Hasil baking tersimpan dan stok produk jadi bertambah.");
+    } catch (error) {
+      const message = getProductStockErrorMessage(error);
+      setPageError(message);
+      toast.error(message);
+    }
+  }
+
+  async function handleFinishedRelease(values) {
+    try {
+      const noteParts = [`Tujuan: ${values.destination}`];
+      if (values.notes) noteParts.push(values.notes);
+
+      await recordCafeDeposit({
+        productId: finishedRelease.productId,
+        qty: values.qty,
+        movementDate: getLocalDate(),
+        notes: noteParts.join(" · "),
+        operationKey: values.operationKey,
+      });
+      await loadData();
+      setFinishedRelease(null);
+      toast.success("Pengeluaran produk tersimpan dan stok produk jadi berkurang.");
+    } catch (error) {
+      const message = getProductStockErrorMessage(error);
+      setPageError(message);
+      toast.error(message);
+    }
+  }
+
+  if (loading) return <LoadingState message="Memuat stok produk..." />;
+
+  return (
+    <div>
+      <PageTitle
+        title="Stok Produk"
+        subtitle="Kelola stok frozen, proses proofing, dan produk jadi"
+      />
+
+      {pageError && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+          {pageError}
+        </div>
+      )}
+
+      <section className="mb-8">
+        <h2 className="mb-4 text-xl font-bold text-gray-900">Stok Frozen</h2>
+        {!frozenLots.length ? (
+          <Card><p className="py-6 text-center text-gray-500">Belum ada stok frozen yang tersedia.</p></Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {frozenLots.map((lot) => (
+              <Card key={lot.lotId}>
+                <p className="text-sm text-gray-500">{lot.productSku || "Produk"}</p>
+                <h3 className="mt-1 text-lg font-bold text-gray-900">{lot.productNama}</h3>
+                <p className="mt-3 text-sm text-gray-500">Lot</p>
+                <p className="font-semibold text-gray-800">{lot.lotCode}</p>
+                <div className="mt-5 flex items-end justify-between gap-4">
+                  <div><p className="text-sm text-gray-500">Tersedia</p><p className="text-2xl font-bold text-amber-700">{lot.saldo} pcs</p></div>
+                  <Button onClick={() => setReleaseLot(lot)}>Keluarkan Frozen</Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mb-8">
+        <h2 className="mb-4 text-xl font-bold text-gray-900">Sedang Proofing</h2>
+        {!processingSplits.length ? (
+          <Card><p className="py-6 text-center text-gray-500">Tidak ada frozen yang sedang diproses.</p></Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {processingSplits.map((split) => (
+              <Card key={split.id}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">{split.productNama}</h3>
+                    <p className="mt-1 text-sm text-gray-500">Lot {split.sourceLotCode || split.lotCode}</p>
+                    <p className="mt-3 font-semibold">{split.qty} pcs</p>
+                  </div>
+                  <StatusBadge status={split.status} />
+                </div>
+                <div className="mt-5 flex justify-end">
+                  <Button onClick={() => setBakingSplit(split)}>Catat Hasil Baking</Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-xl font-bold text-gray-900">Stok Produk Jadi</h2>
+        {!finishedBalances.length ? (
+          <Card><p className="py-6 text-center text-gray-500">Belum ada stok produk jadi.</p></Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {finishedBalances.map((item) => (
+              <Card key={item.productId}>
+                <p className="text-sm text-gray-500">{item.productSku || "Produk"}</p>
+                <h3 className="mt-1 text-lg font-bold text-gray-900">{item.productNama}</h3>
+                <div className="mt-5 flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Tersedia</p>
+                    <p className="text-2xl font-bold text-green-700">{item.saldo} pcs</p>
+                  </div>
+                  <Button onClick={() => setFinishedRelease(item)}>Keluarkan Produk</Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <Modal open={Boolean(releaseLot)} onClose={() => setReleaseLot(null)}>
+        {releaseLot && <FrozenReleaseForm lot={releaseLot} onSave={handleRelease} onCancel={() => setReleaseLot(null)} />}
+      </Modal>
+      <Modal open={Boolean(bakingSplit)} onClose={() => setBakingSplit(null)}>
+        {bakingSplit && <ProductionResultForm split={bakingSplit} onSave={handleBaking} onCancel={() => setBakingSplit(null)} />}
+      </Modal>
+      <Modal open={Boolean(finishedRelease)} onClose={() => setFinishedRelease(null)}>
+        {finishedRelease && (
+          <FinishedProductReleaseForm
+            item={finishedRelease}
+            onSave={handleFinishedRelease}
+            onCancel={() => setFinishedRelease(null)}
+          />
+        )}
+      </Modal>
+    </div>
+  );
+}

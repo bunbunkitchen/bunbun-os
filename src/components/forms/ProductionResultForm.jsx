@@ -1,145 +1,92 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-import Input from "../ui/Input";
+import { createProductStockOperationKey } from "../../services/productStockService";
 import Button from "../ui/Button";
+import Input from "../ui/Input";
 
-export default function ProductionResultForm({
-  batch,
-  onSave,
-  onCancel,
-}) {
-  const [form, setForm] = useState({
-    selesai: batch?.selesai ?? "",
-    reject: batch?.reject ?? "",
-  });
-
+export default function ProductionResultForm({ split, onSave, onCancel }) {
+  const [form, setForm] = useState({ goodQty: "", rejectQty: "" });
   const [errors, setErrors] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const operationKeyRef = useRef(null);
+
+  const goodQty = Number(form.goodQty || 0);
+  const rejectQty = Number(form.rejectQty || 0);
+  const total = goodQty + rejectQty;
 
   function handleChange(field, value) {
-    setForm((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-
-    setErrors((previous) => ({
-      ...previous,
-      [field]: "",
-    }));
+    setForm((previous) => ({ ...previous, [field]: value }));
+    setErrors({});
   }
 
   function validate() {
-    const newErrors = {};
-
-    const selesai = Number(form.selesai);
-    const reject = Number(form.reject);
-
-    if (form.selesai === "") {
-      newErrors.selesai =
-        "Jumlah selesai wajib diisi";
-    } else if (selesai < 0) {
-      newErrors.selesai =
-        "Jumlah selesai tidak boleh negatif";
+    const nextErrors = {};
+    if (!Number.isInteger(goodQty) || goodQty < 0) {
+      nextErrors.goodQty = "Jumlah berhasil harus bilangan bulat non-negatif.";
     }
-
-    if (form.reject === "") {
-      newErrors.reject =
-        "Jumlah reject wajib diisi";
-    } else if (reject < 0) {
-      newErrors.reject =
-        "Jumlah reject tidak boleh negatif";
+    if (!Number.isInteger(rejectQty) || rejectQty < 0) {
+      nextErrors.rejectQty = "Jumlah reject harus bilangan bulat non-negatif.";
     }
-
-    if (
-      selesai >= 0 &&
-      reject >= 0 &&
-      selesai + reject > batch.target
-    ) {
-      newErrors.reject =
-        "Total selesai dan reject tidak boleh melebihi target";
+    if (total !== split.qty) {
+      nextErrors.total = `Total berhasil dan reject harus tepat ${split.qty} pcs.`;
     }
-
-    setErrors(newErrors);
-
-    return Object.keys(newErrors).length === 0;
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   }
 
-  function handleSubmit() {
-    if (!validate()) {
-      return;
+  async function handleSubmit() {
+    if (isSaving || !validate()) return;
+    const key = operationKeyRef.current || createProductStockOperationKey();
+    operationKeyRef.current = key;
+    setIsSaving(true);
+    try {
+      await onSave({ goodQty, rejectQty, operationKey: key });
+    } finally {
+      setIsSaving(false);
     }
-
-    onSave({
-      batchKode: batch.kode,
-      selesai: Number(form.selesai),
-      reject: Number(form.reject),
-    });
   }
 
-  function renderError(field) {
-    if (!errors[field]) {
-      return null;
-    }
-
-    return (
-      <p className="mt-1 text-sm text-red-500">
-        {errors[field]}
-      </p>
-    );
-  }
+  const error = (field) => errors[field] && (
+    <p className="mt-1 text-sm text-red-500">{errors[field]}</p>
+  );
 
   return (
     <>
-      <h2 className="mb-2 text-2xl font-bold">
-        Input Hasil Produksi
-      </h2>
-
+      <h2 className="mb-2 text-2xl font-bold">Catat Hasil Baking</h2>
       <p className="mb-6 text-sm text-gray-500">
-        Batch {batch.kode} · Target {batch.target} pcs
+        Bagian direct {split.qty} pcs
+        {split.sourceLotCode ? ` · dari lot ${split.sourceLotCode}` : ""}
       </p>
 
       <div className="space-y-4">
         <div>
-          <Input
-            type="number"
-            min="0"
-            placeholder="Jumlah selesai"
-            value={form.selesai}
-            onChange={(event) =>
-              handleChange(
-                "selesai",
-                event.target.value
-              )
-            }
-          />
-
-          {renderError("selesai")}
+          <label className="mb-1 block text-sm font-medium text-gray-700">Berhasil</label>
+          <Input type="number" min="0" step="1" value={form.goodQty}
+            disabled={isSaving} onChange={(event) => handleChange("goodQty", event.target.value)} />
+          {error("goodQty")}
         </div>
-
         <div>
-          <Input
-            type="number"
-            min="0"
-            placeholder="Jumlah reject"
-            value={form.reject}
-            onChange={(event) =>
-              handleChange(
-                "reject",
-                event.target.value
-              )
-            }
-          />
-
-          {renderError("reject")}
+          <label className="mb-1 block text-sm font-medium text-gray-700">Reject</label>
+          <Input type="number" min="0" step="1" value={form.rejectQty}
+            disabled={isSaving} onChange={(event) => handleChange("rejectQty", event.target.value)} />
+          {error("rejectQty")}
         </div>
       </div>
 
-      <div className="mt-6 flex justify-end gap-3">
-        <Button onClick={onCancel}>
-          Batal
-        </Button>
+      <div className="mt-5 rounded-lg bg-stone-100 p-4 text-sm">
+        <div className="flex justify-between gap-4">
+          <span className="text-gray-500">Total dicatat</span>
+          <span className={total === split.qty ? "font-semibold text-green-700" : "font-semibold text-amber-700"}>
+            {total} / {split.qty} pcs
+          </span>
+        </div>
+        {error("total")}
+      </div>
 
-        <Button onClick={handleSubmit}>
-          Simpan Hasil
+      <div className="mt-6 flex justify-end gap-3">
+        <Button onClick={onCancel} disabled={isSaving}>Batal</Button>
+        <Button onClick={handleSubmit} disabled={isSaving}>
+          {isSaving ? "Menyimpan..." : "Simpan Hasil Baking"}
         </Button>
       </div>
     </>

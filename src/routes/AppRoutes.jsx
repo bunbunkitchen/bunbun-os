@@ -20,6 +20,7 @@ import RecipeDetail from "../pages/recipes/RecipeDetail";
 import Production from "../pages/production/Production";
 import ProductionBatches from "../pages/production/ProductionBatches";
 import Inventory from "../pages/inventory/Inventory";
+import ProductStock from "../pages/inventory/ProductStock";
 import Purchasing from "../pages/purchasing/Purchasing";
 import Income from "../pages/finance/Income";
 import Expense from "../pages/finance/Expense";
@@ -182,6 +183,17 @@ export default function AppRoutes() {
                 ]}
               >
                 <Inventory />
+              </RoleRoute>
+            }
+          />
+
+          <Route
+            path="product-stock"
+            element={
+              <RoleRoute
+                allowedRoles={["owner", "baker", "helper"]}
+              >
+                <ProductStock />
               </RoleRoute>
             }
           />

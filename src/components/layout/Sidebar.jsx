@@ -9,6 +9,7 @@ import {
   MdMenuBook,
   MdFactory,
   MdInventory,
+  MdAcUnit,
   MdShoppingCart,
   MdSettings,
   MdViewKanban,
@@ -73,6 +74,12 @@ const menus = [
     name: "Inventory",
     path: "/inventory",
     icon: <MdInventory />,
+    roles: ["owner", "baker", "helper"],
+  },
+  {
+    name: "Stok Produk",
+    path: "/product-stock",
+    icon: <MdAcUnit />,
     roles: ["owner", "baker", "helper"],
   },
   {

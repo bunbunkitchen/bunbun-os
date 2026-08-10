@@ -20,9 +20,7 @@ import LoadingState from "../../components/ui/LoadingState";
 import KpiCard from "../../components/dashboard/KpiCard";
 import BusinessIntelligence from "../../components/dashboard/BusinessIntelligence";
 
-import {
-  useAuth,
-} from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   getBusinessIntelligence,
@@ -32,12 +30,8 @@ import {
 export default function Dashboard() {
   const { role } = useAuth();
 
-  const isOwner =
-    role === "owner";
-
-  const isBaker =
-    role === "baker";
-
+  const isOwner = role === "owner";
+  const isBaker = role === "baker";
   const canSeePurchase =
     isOwner || isBaker;
 
@@ -59,7 +53,6 @@ export default function Dashboard() {
       rejectedQty: 0,
 
       inventoryTransactions: 0,
-
       activeBatchItems: [],
     });
 
@@ -150,7 +143,7 @@ export default function Dashboard() {
       )}
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {/* KEUANGAN — OWNER SAJA */}
+        {/* OWNER SAJA */}
         {isOwner && (
           <>
             <KpiCard
@@ -207,7 +200,7 @@ export default function Dashboard() {
           </>
         )}
 
-        {/* PEMBELIAN — OWNER + BAKER */}
+        {/* OWNER + BAKER */}
         {canSeePurchase && (
           <KpiCard
             title="Pembelian Hari Ini"
@@ -226,7 +219,7 @@ export default function Dashboard() {
           />
         )}
 
-        {/* OPERASIONAL — SEMUA ROLE */}
+        {/* SEMUA ROLE */}
         <KpiCard
           title="Hasil Produksi"
           value={`${Number(
@@ -259,13 +252,13 @@ export default function Dashboard() {
             summary.productionOrders ||
             0
           }
-          subtitle={`${summary.draftOrders || 0} Draft · ${
+          subtitle={`${
+            summary.draftOrders || 0
+          } Draft · ${
             summary.generatedOrders ||
             0
           } Generated`}
-          icon={
-            <MdFactory />
-          }
+          icon={<MdFactory />}
           tone="gray"
         />
 
@@ -277,9 +270,7 @@ export default function Dashboard() {
               ? "Bahan perlu diperiksa"
               : "Semua stok dalam batas aman"
           }
-          icon={
-            <MdWarning />
-          }
+          icon={<MdWarning />}
           tone={
             lowStockCount > 0
               ? "red"
@@ -293,9 +284,7 @@ export default function Dashboard() {
           data={
             businessIntelligence
           }
-          showFinance={
-            isOwner
-          }
+          showFinance={isOwner}
         />
       </div>
     </div>

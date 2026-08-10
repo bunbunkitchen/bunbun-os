@@ -9,9 +9,15 @@ import Card from "../../components/ui/Card";
 import DataTable from "../../components/ui/DataTable";
 import StatusBadge from "../../components/ui/StatusBadge";
 import LoadingState from "../../components/ui/LoadingState";
+import Button from "../../components/ui/Button";
+import Modal from "../../components/modal/Modal";
+import StockAdditionForm from "../../components/forms/StockAdditionForm";
+import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   getAllInventoryTransactions,
+  createNonPurchaseStockAddition,
 } from "../../services/inventoryService";
 
 function convertToBaseUnit(jumlah, satuan) {
@@ -96,6 +102,8 @@ function formatStock(stok, satuan) {
 }
 
 export default function Inventory() {
+  const toast = useToast();
+  const { role } = useAuth();
   const [transactions, setTransactions] =
     useState([]);
 
@@ -105,32 +113,41 @@ export default function Inventory() {
   const [pageError, setPageError] =
     useState("");
 
-  useEffect(() => {
-    async function loadInventory() {
-      try {
-        setPageError("");
+  const [additionOpen, setAdditionOpen] = useState(false);
+  const [savingAddition, setSavingAddition] = useState(false);
 
-        const data =
-          await getAllInventoryTransactions();
-
-        setTransactions(data);
-      } catch (error) {
-        console.error(
-          "Gagal memuat inventory:",
-          error
-        );
-
-        setPageError(
-          error.message ||
-            "Data inventory gagal dimuat."
-        );
-      } finally {
-        setLoading(false);
-      }
+  async function loadInventory() {
+    try {
+      setPageError("");
+      const data = await getAllInventoryTransactions();
+      setTransactions(data);
+    } catch (error) {
+      console.error("Gagal memuat inventory:", error);
+      setPageError(error.message || "Data inventory gagal dimuat.");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    loadInventory();
+  useEffect(() => {
+    void loadInventory();
   }, []);
+
+  async function handleStockAddition(values) {
+    if (savingAddition) return;
+    setSavingAddition(true);
+    try {
+      await createNonPurchaseStockAddition(values);
+      await loadInventory();
+      setAdditionOpen(false);
+      toast.success("Stok berhasil ditambahkan tanpa pengeluaran kas.");
+    } catch (error) {
+      toast.error(error.message || "Penambahan stok gagal.");
+      throw error;
+    } finally {
+      setSavingAddition(false);
+    }
+  }
 
   const stockSummary = useMemo(() => {
     const map = new Map();
@@ -274,6 +291,10 @@ export default function Inventory() {
     {
       key: "keterangan",
       title: "Keterangan",
+      render: (transaction) =>
+        transaction.sumberStok
+          ? `${transaction.sumberStok}${transaction.keterangan ? ` — ${transaction.keterangan}` : ""}`
+          : transaction.keterangan,
     },
   ];
 
@@ -285,10 +306,15 @@ export default function Inventory() {
 
   return (
     <div>
-      <PageTitle
-        title="Inventory"
-        subtitle="Pantau stok dan pergerakan item Bunbun Kitchen"
-      />
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <PageTitle
+          title="Inventory"
+          subtitle="Pantau stok dan pergerakan item Bunbun Kitchen"
+        />
+        {role === "owner" && (
+          <Button onClick={() => setAdditionOpen(true)}>+ Penambahan Stok</Button>
+        )}
+      </div>
 
       {pageError && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
@@ -334,6 +360,14 @@ export default function Inventory() {
           />
         </Card>
       </div>
+
+      <Modal open={additionOpen} onClose={() => !savingAddition && setAdditionOpen(false)}>
+        <StockAdditionForm
+          onSave={handleStockAddition}
+          onCancel={() => setAdditionOpen(false)}
+          saving={savingAddition}
+        />
+      </Modal>
     </div>
   );
 }

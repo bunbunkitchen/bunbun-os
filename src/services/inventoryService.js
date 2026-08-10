@@ -46,6 +46,9 @@ function mapTransaction(row) {
 
     purchaseId: row.purchase_id,
 
+    sumberStok: row.stock_source ?? "",
+    nilaiSatuan: Number(row.unit_value || 0),
+
     jumlah: Number(row.qty || 0),
     satuan: row.unit,
     keterangan: row.notes ?? "",
@@ -576,4 +579,29 @@ export async function createProductionInMovement({
   }
 
   return mapTransaction(data);
+}
+
+export async function createNonPurchaseStockAddition(addition) {
+  const { data, error } = await supabase.rpc(
+    "record_non_purchase_stock",
+    {
+      p_transaction_date: addition.tanggal,
+      p_ingredient_id: addition.ingredientId,
+      p_qty: addition.jumlah,
+      p_unit: addition.satuan,
+      p_unit_value: addition.nilaiSatuan,
+      p_stock_source: addition.sumber,
+      p_notes: addition.keterangan || null,
+      p_operation_key: addition.operationKey,
+    }
+  );
+
+  if (error) {
+    if (error.message?.includes("record_non_purchase_stock")) {
+      throw new Error("Fitur penambahan stok belum dipasang ke database.");
+    }
+    throw error;
+  }
+
+  return data;
 }
