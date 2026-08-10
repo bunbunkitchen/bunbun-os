@@ -8,6 +8,7 @@ import Currency from "../../components/ui/Currency";
 import StatusBadge from "../../components/ui/StatusBadge";
 import Button from "../../components/ui/Button";
 import ProductionOrderForm from "../../components/forms/ProductionOrderForm";
+import LoadingState from "../../components/ui/LoadingState";
 
 import {
   createProductionOrder,
@@ -180,12 +181,10 @@ export default function Production() {
   ];
 
   if (loading) {
-    return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-amber-700">
-        Memuat Production Order...
-      </div>
-    );
-  }
+  return (
+    <LoadingState message="Memuat dashboard..." />
+  );
+}
 
   return (
     <div>

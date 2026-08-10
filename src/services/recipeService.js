@@ -284,47 +284,85 @@ export async function createRecipeItem(
     updated_by: user.id,
   };
 
+  /*
+   * Cek apakah bahan pernah ada,
+   * termasuk yang sudah di-soft delete.
+   */
+  const {
+    data: existingItem,
+    error: existingError,
+  } = await supabase
+    .from(RECIPE_ITEM_TABLE)
+    .select("id, is_deleted")
+    .eq(
+      "recipe_id",
+      item.recipeId
+    )
+    .eq(
+      "ingredient_id",
+      item.ingredientId
+    )
+    .maybeSingle();
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  /*
+   * Kalau masih aktif, benar-benar duplikat.
+   */
+  if (
+    existingItem &&
+    existingItem.is_deleted === false
+  ) {
+    throw new Error(
+      "Bahan tersebut sudah ada dalam Recipe."
+    );
+  }
+
+  /*
+   * Kalau pernah dihapus, aktifkan kembali
+   * dan perbarui jumlah/satuannya.
+   */
+  if (
+    existingItem &&
+    existingItem.is_deleted === true
+  ) {
+    const { data, error } =
+      await supabase
+        .from(RECIPE_ITEM_TABLE)
+        .update({
+          jumlah: payload.jumlah,
+          satuan: payload.satuan,
+          urutan: payload.urutan,
+          is_deleted: false,
+          updated_by: user.id,
+        })
+        .eq("id", existingItem.id)
+        .select(`
+          *,
+          ingredients (
+            kode,
+            nama,
+            harga,
+            satuan
+          )
+        `)
+        .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return mapRecipeItem(data);
+  }
+
+  /*
+   * Kalau belum pernah ada, insert baru.
+   */
   const { data, error } = await supabase
     .from(RECIPE_ITEM_TABLE)
     .insert(payload)
-    .select(`
-      *,
-      ingredients (
-        kode,
-        nama,
-        harga,
-        satuan
-      )
-    `)
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return mapRecipeItem(data);
-}
-
-export async function updateRecipeItem(
-  recipeItemId,
-  item
-) {
-  const user = await getCurrentUser();
-
-  const payload = {
-    ingredient_id:
-      item.ingredientId,
-    jumlah: Number(item.jumlah),
-    satuan: item.satuan.trim(),
-    urutan: Number(item.urutan || 1),
-    updated_by: user.id,
-  };
-
-  const { data, error } = await supabase
-    .from(RECIPE_ITEM_TABLE)
-    .update(payload)
-    .eq("id", recipeItemId)
-    .eq("is_deleted", false)
     .select(`
       *,
       ingredients (

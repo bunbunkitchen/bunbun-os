@@ -7,6 +7,7 @@ import PageTitle from "../../components/ui/PageTitle";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import LoadingState from "../../components/ui/LoadingState";
 
 import {
   getSettings,
@@ -178,12 +179,10 @@ export default function Settings() {
   }
 
   if (loading) {
-    return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-amber-700">
-        Memuat pengaturan...
-      </div>
-    );
-  }
+  return (
+    <LoadingState message="Memuat dashboard..." />
+  );
+}
 
   return (
     <div>

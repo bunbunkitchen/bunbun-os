@@ -342,7 +342,7 @@ export default function ProductionOrderForm({
             loadingItems
           }
         >
-          Generate
+          Simpan Order
         </Button>
       </div>
     </>

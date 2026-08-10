@@ -26,6 +26,8 @@ import Expense from "../pages/finance/Expense";
 import Reports from "../pages/reports/Reports";
 import Settings from "../pages/settings/Settings";
 import GoLiveChecklist from "../pages/settings/GoLiveChecklist";
+import Profile from "../pages/profile/Profile";
+import UserManagement from "../pages/users/UserManagement";
 
 export default function AppRoutes() {
   return (
@@ -49,11 +51,29 @@ export default function AppRoutes() {
             element={<Dashboard />}
           />
 
+          <Route
+            path="profile"
+            element={<Profile />}
+          />
+
           {/* Hanya Owner */}
+          <Route
+            path="users"
+            element={
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
+                <UserManagement />
+              </RoleRoute>
+            }
+          />
+
           <Route
             path="products"
             element={
-              <RoleRoute allowedRoles={["owner"]}>
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
                 <Products />
               </RoleRoute>
             }
@@ -62,7 +82,9 @@ export default function AppRoutes() {
           <Route
             path="categories"
             element={
-              <RoleRoute allowedRoles={["owner"]}>
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
                 <Categories />
               </RoleRoute>
             }
@@ -71,7 +93,9 @@ export default function AppRoutes() {
           <Route
             path="ingredients"
             element={
-              <RoleRoute allowedRoles={["owner"]}>
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
                 <Ingredients />
               </RoleRoute>
             }
@@ -80,7 +104,9 @@ export default function AppRoutes() {
           <Route
             path="suppliers"
             element={
-              <RoleRoute allowedRoles={["owner"]}>
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
                 <Suppliers />
               </RoleRoute>
             }
@@ -164,7 +190,9 @@ export default function AppRoutes() {
           <Route
             path="purchasing"
             element={
-              <RoleRoute allowedRoles={["owner"]}>
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
                 <Purchasing />
               </RoleRoute>
             }
@@ -173,7 +201,9 @@ export default function AppRoutes() {
           <Route
             path="finance/income"
             element={
-              <RoleRoute allowedRoles={["owner"]}>
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
                 <Income />
               </RoleRoute>
             }
@@ -182,7 +212,9 @@ export default function AppRoutes() {
           <Route
             path="finance/expense"
             element={
-              <RoleRoute allowedRoles={["owner"]}>
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
                 <Expense />
               </RoleRoute>
             }
@@ -191,7 +223,9 @@ export default function AppRoutes() {
           <Route
             path="reports"
             element={
-              <RoleRoute allowedRoles={["owner"]}>
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
                 <Reports />
               </RoleRoute>
             }
@@ -200,7 +234,9 @@ export default function AppRoutes() {
           <Route
             path="settings"
             element={
-              <RoleRoute allowedRoles={["owner"]}>
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
                 <Settings />
               </RoleRoute>
             }
@@ -209,7 +245,9 @@ export default function AppRoutes() {
           <Route
             path="settings/go-live"
             element={
-              <RoleRoute allowedRoles={["owner"]}>
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
                 <GoLiveChecklist />
               </RoleRoute>
             }

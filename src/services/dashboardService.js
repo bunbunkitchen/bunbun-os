@@ -17,7 +17,9 @@ const OUTGOING_TRANSACTION_TYPES = [
   "ADJUSTMENT_OUT",
 ];
 
-function getLocalDateString(date = new Date()) {
+function getLocalDateString(
+  date = new Date()
+) {
   const year = date.getFullYear();
 
   const month = String(
@@ -37,13 +39,23 @@ function getCurrentMonthRange() {
   const year = now.getFullYear();
   const monthIndex = now.getMonth();
 
-  const monthStart = getLocalDateString(
-    new Date(year, monthIndex, 1)
-  );
+  const monthStart =
+    getLocalDateString(
+      new Date(
+        year,
+        monthIndex,
+        1
+      )
+    );
 
-  const monthEnd = getLocalDateString(
-    new Date(year, monthIndex + 1, 0)
-  );
+  const monthEnd =
+    getLocalDateString(
+      new Date(
+        year,
+        monthIndex + 1,
+        0
+      )
+    );
 
   return {
     monthStart,
@@ -54,7 +66,8 @@ function getCurrentMonthRange() {
 function sumBy(rows, field) {
   return (rows ?? []).reduce(
     (total, row) =>
-      total + Number(row[field] || 0),
+      total +
+      Number(row[field] || 0),
     0
   );
 }
@@ -69,35 +82,56 @@ function validateResults(results) {
   }
 }
 
+async function getCurrentRole() {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error(
+      "Pengguna belum login."
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return String(data.role || "")
+    .trim()
+    .toLowerCase();
+}
+
 export async function getDashboardSummary() {
   const today = getLocalDateString();
 
+  const role = await getCurrentRole();
+
+  const isOwner =
+    role === "owner";
+
+  const isBaker =
+    role === "baker";
+
+  const canSeePurchase =
+    isOwner || isBaker;
+
   const [
-    incomeResult,
-    expenseResult,
-    purchaseResult,
     orderResult,
     batchResult,
     inventoryResult,
   ] = await Promise.all([
-    supabase
-      .from("incomes")
-      .select("pemasukan_bunbun")
-      .eq("tanggal", today)
-      .eq("is_deleted", false),
-
-    supabase
-      .from("expenses")
-      .select("nominal")
-      .eq("tanggal", today)
-      .eq("is_deleted", false),
-
-    supabase
-      .from("purchases")
-      .select("total")
-      .eq("tanggal", today)
-      .eq("is_deleted", false),
-
     supabase
       .from("production_orders")
       .select("id, status")
@@ -131,28 +165,66 @@ export async function getDashboardSummary() {
   ]);
 
   validateResults([
-    incomeResult,
-    expenseResult,
-    purchaseResult,
     orderResult,
     batchResult,
     inventoryResult,
   ]);
 
-  const income = sumBy(
-    incomeResult.data,
-    "pemasukan_bunbun"
-  );
+  let income = 0;
+  let expense = 0;
+  let purchaseToday = 0;
 
-  const expense = sumBy(
-    expenseResult.data,
-    "nominal"
-  );
+  if (isOwner) {
+    const [
+      incomeResult,
+      expenseResult,
+    ] = await Promise.all([
+      supabase
+        .from("incomes")
+        .select("pemasukan_bunbun")
+        .eq("tanggal", today)
+        .eq("is_deleted", false),
 
-  const purchaseToday = sumBy(
-    purchaseResult.data,
-    "total"
-  );
+      supabase
+        .from("expenses")
+        .select("nominal")
+        .eq("tanggal", today)
+        .eq("is_deleted", false),
+    ]);
+
+    validateResults([
+      incomeResult,
+      expenseResult,
+    ]);
+
+    income = sumBy(
+      incomeResult.data,
+      "pemasukan_bunbun"
+    );
+
+    expense = sumBy(
+      expenseResult.data,
+      "nominal"
+    );
+  }
+
+  if (canSeePurchase) {
+    const purchaseResult =
+      await supabase
+        .from("purchases")
+        .select("total")
+        .eq("tanggal", today)
+        .eq("is_deleted", false);
+
+    if (purchaseResult.error) {
+      throw purchaseResult.error;
+    }
+
+    purchaseToday = sumBy(
+      purchaseResult.data,
+      "total"
+    );
+  }
 
   const orders =
     orderResult.data ?? [];
@@ -165,14 +237,17 @@ export async function getDashboardSummary() {
       today
   );
 
-  const draftOrders = orders.filter(
-    (order) => order.status === "Draft"
-  ).length;
+  const draftOrders =
+    orders.filter(
+      (order) =>
+        order.status === "Draft"
+    ).length;
 
-  const generatedOrders = orders.filter(
-    (order) =>
-      order.status === "Generated"
-  ).length;
+  const generatedOrders =
+    orders.filter(
+      (order) =>
+        order.status === "Generated"
+    ).length;
 
   const activeBatches =
     todayBatches.filter(
@@ -231,28 +306,41 @@ export async function getDashboardSummary() {
       activeBatches.map((batch) => ({
         id: batch.id,
         kode: batch.kode,
+
         recipeKode:
           batch.production_orders
             ?.recipes?.kode ?? "",
+
         recipeNama:
           batch.production_orders
             ?.recipes?.nama ?? "",
+
         target: Number(
           batch.target || 0
         ),
+
         selesai: Number(
           batch.selesai || 0
         ),
+
         reject: Number(
           batch.reject || 0
         ),
+
         status: batch.status,
       })),
   };
 }
 
 export async function getBusinessIntelligence() {
-  const today = getLocalDateString();
+  const today =
+    getLocalDateString();
+
+  const role =
+    await getCurrentRole();
+
+  const isOwner =
+    role === "owner";
 
   const {
     monthStart,
@@ -260,32 +348,10 @@ export async function getBusinessIntelligence() {
   } = getCurrentMonthRange();
 
   const [
-    incomeResult,
-    expenseResult,
     batchResult,
     ingredientResult,
     inventoryResult,
   ] = await Promise.all([
-    supabase
-      .from("incomes")
-      .select(`
-        tanggal,
-        pemasukan_bunbun
-      `)
-      .gte("tanggal", monthStart)
-      .lte("tanggal", monthEnd)
-      .eq("is_deleted", false),
-
-    supabase
-      .from("expenses")
-      .select(`
-        tanggal,
-        nominal
-      `)
-      .gte("tanggal", monthStart)
-      .lte("tanggal", monthEnd)
-      .eq("is_deleted", false),
-
     supabase
       .from("production_batches")
       .select(`
@@ -325,38 +391,88 @@ export async function getBusinessIntelligence() {
         qty,
         unit
       `)
-      .not("ingredient_id", "is", null)
+      .not(
+        "ingredient_id",
+        "is",
+        null
+      )
       .eq("is_deleted", false),
   ]);
 
   validateResults([
-    incomeResult,
-    expenseResult,
     batchResult,
     ingredientResult,
     inventoryResult,
   ]);
 
-  const monthlyIncome = sumBy(
-    incomeResult.data,
-    "pemasukan_bunbun"
-  );
+  let monthlyIncome = 0;
+  let monthlyExpense = 0;
 
-  const monthlyExpense = sumBy(
-    expenseResult.data,
-    "nominal"
-  );
+  if (isOwner) {
+    const [
+      incomeResult,
+      expenseResult,
+    ] = await Promise.all([
+      supabase
+        .from("incomes")
+        .select(
+          "tanggal, pemasukan_bunbun"
+        )
+        .gte(
+          "tanggal",
+          monthStart
+        )
+        .lte(
+          "tanggal",
+          monthEnd
+        )
+        .eq("is_deleted", false),
+
+      supabase
+        .from("expenses")
+        .select(
+          "tanggal, nominal"
+        )
+        .gte(
+          "tanggal",
+          monthStart
+        )
+        .lte(
+          "tanggal",
+          monthEnd
+        )
+        .eq("is_deleted", false),
+    ]);
+
+    validateResults([
+      incomeResult,
+      expenseResult,
+    ]);
+
+    monthlyIncome = sumBy(
+      incomeResult.data,
+      "pemasukan_bunbun"
+    );
+
+    monthlyExpense = sumBy(
+      expenseResult.data,
+      "nominal"
+    );
+  }
 
   const monthBatches = (
     batchResult.data ?? []
   ).filter((batch) => {
     const productionDate =
-      batch.production_orders?.tanggal;
+      batch.production_orders
+        ?.tanggal;
 
     return (
       productionDate &&
-      productionDate >= monthStart &&
-      productionDate <= monthEnd
+      productionDate >=
+        monthStart &&
+      productionDate <=
+        monthEnd
     );
   });
 
@@ -388,7 +504,9 @@ export async function getBusinessIntelligence() {
 
   const rejectRate =
     rejectBase > 0
-      ? (todayReject / rejectBase) * 100
+      ? (todayReject /
+          rejectBase) *
+        100
       : 0;
 
   const productionByRecipeMap =
@@ -396,19 +514,23 @@ export async function getBusinessIntelligence() {
 
   monthBatches.forEach((batch) => {
     const recipe =
-      batch.production_orders?.recipes;
+      batch.production_orders
+        ?.recipes;
 
     const recipeCode =
-      recipe?.kode || "TANPA-KODE";
+      recipe?.kode ||
+      "TANPA-KODE";
 
     const current =
       productionByRecipeMap.get(
         recipeCode
       ) || {
         kode: recipeCode,
+
         nama:
           recipe?.nama ||
           "Recipe tidak diketahui",
+
         selesai: 0,
         reject: 0,
       };
@@ -436,14 +558,8 @@ export async function getBusinessIntelligence() {
         first.selesai
     );
 
-  /*
-   * Stok disimpan dalam satuan dasar:
-   *
-   * kg / gram  -> gram
-   * liter / ml -> ml
-   * pcs        -> pcs
-   */
-  const stockBaseMap = new Map();
+  const stockBaseMap =
+    new Map();
 
   (
     inventoryResult.data ?? []
@@ -501,13 +617,10 @@ export async function getBusinessIntelligence() {
         ingredient.id
       ) || 0;
 
-    /*
-     * minimum_stok diasumsikan disimpan
-     * sesuai satuan master bahan.
-     */
     const minimumStock =
       Number(
-        ingredient.minimum_stok || 0
+        ingredient.minimum_stok ||
+          0
       );
 
     const minimumStockBase =
@@ -526,17 +639,21 @@ export async function getBusinessIntelligence() {
       id: ingredient.id,
       kode: ingredient.kode,
       nama: ingredient.nama,
-      satuan: ingredient.satuan,
+      satuan:
+        ingredient.satuan,
 
       stok: displayStock,
       stokBase: stockBase,
 
-      minimumStok: minimumStock,
+      minimumStok:
+        minimumStock,
+
       minimumStokBase:
         minimumStockBase,
 
       isLowStock:
-        stockBase <= minimumStockBase,
+        stockBase <=
+        minimumStockBase,
     };
   });
 
@@ -571,6 +688,7 @@ export async function getBusinessIntelligence() {
   return {
     monthlyIncome,
     monthlyExpense,
+
     monthlyProfit:
       monthlyIncome -
       monthlyExpense,
@@ -585,6 +703,7 @@ export async function getBusinessIntelligence() {
     productionByRecipe,
 
     lowStockItems,
+
     lowStockCount:
       lowStockItems.length,
 
@@ -593,38 +712,48 @@ export async function getBusinessIntelligence() {
     )
       .filter(
         (batch) =>
-          batch.status !== "Finished" &&
-          batch.status !== "Cancelled"
+          batch.status !==
+            "Finished" &&
+          batch.status !==
+            "Cancelled"
       )
       .map((batch) => ({
         id: batch.id,
         kode: batch.kode,
+
         tanggal:
           batch.production_orders
             ?.tanggal ?? "",
+
         recipeKode:
           batch.production_orders
             ?.recipes?.kode ?? "",
+
         recipeNama:
           batch.production_orders
             ?.recipes?.nama ?? "",
+
         target: Number(
           batch.target || 0
         ),
+
         selesai: Number(
           batch.selesai || 0
         ),
+
         reject: Number(
           batch.reject || 0
         ),
+
         status: batch.status,
       }))
-      .sort((first, second) =>
-        String(
-          second.tanggal
-        ).localeCompare(
-          String(first.tanggal)
-        )
+      .sort(
+        (first, second) =>
+          String(
+            second.tanggal
+          ).localeCompare(
+            String(first.tanggal)
+          )
       ),
   };
 }

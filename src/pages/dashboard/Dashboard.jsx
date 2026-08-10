@@ -21,23 +21,46 @@ import KpiCard from "../../components/dashboard/KpiCard";
 import BusinessIntelligence from "../../components/dashboard/BusinessIntelligence";
 
 import {
+  useAuth,
+} from "../../context/AuthContext";
+
+import {
   getBusinessIntelligence,
   getDashboardSummary,
 } from "../../services/dashboardService";
 
 export default function Dashboard() {
+  const { role } = useAuth();
+
+  const isOwner =
+    role === "owner";
+
+  const isBaker =
+    role === "baker";
+
+  const canSeePurchase =
+    isOwner || isBaker;
+
   const [summary, setSummary] =
     useState({
       income: 0,
       expense: 0,
       profit: 0,
       purchaseToday: 0,
+
       productionOrders: 0,
       draftOrders: 0,
       generatedOrders: 0,
+
       activeBatch: 0,
+      finishedBatch: 0,
+
       finishedQty: 0,
+      rejectedQty: 0,
+
       inventoryTransactions: 0,
+
+      activeBatchItems: [],
     });
 
   const [
@@ -52,6 +75,8 @@ export default function Dashboard() {
     useState("");
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadDashboard() {
       try {
         setPageError("");
@@ -64,6 +89,10 @@ export default function Dashboard() {
           getBusinessIntelligence(),
         ]);
 
+        if (!isMounted) {
+          return;
+        }
+
         setSummary(summaryData);
 
         setBusinessIntelligence(
@@ -75,16 +104,26 @@ export default function Dashboard() {
           error
         );
 
+        if (!isMounted) {
+          return;
+        }
+
         setPageError(
-          error.message ||
+          error?.message ||
             "Dashboard gagal dimuat."
         );
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
-    loadDashboard();
+    void loadDashboard();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (loading) {
@@ -94,8 +133,8 @@ export default function Dashboard() {
   }
 
   const lowStockCount =
-    businessIntelligence?.lowStockCount ??
-    0;
+    businessIntelligence
+      ?.lowStockCount ?? 0;
 
   return (
     <div>
@@ -111,87 +150,122 @@ export default function Dashboard() {
       )}
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          title="Pemasukan Hari Ini"
-          value={
-            <Currency
-              value={summary.income}
-            />
-          }
-          subtitle="Bagian pendapatan Bunbun"
-          icon={<MdAttachMoney />}
-          tone="green"
-        />
-
-        <KpiCard
-          title="Pengeluaran Hari Ini"
-          value={
-            <Currency
-              value={summary.expense}
-            />
-          }
-          subtitle="Seluruh biaya operasional"
-          icon={<MdMoneyOff />}
-          tone="red"
-        />
-
-        <KpiCard
-          title="Saldo Hari Ini"
-          value={
-            <Currency
-              value={summary.profit}
-            />
-          }
-          subtitle="Pemasukan dikurangi pengeluaran"
-          icon={
-            <MdAccountBalanceWallet />
-          }
-          tone={
-            summary.profit >= 0
-              ? "amber"
-              : "red"
-          }
-        />
-
-        <KpiCard
-          title="Pembelian Hari Ini"
-          value={
-            <Currency
+        {/* KEUANGAN — OWNER SAJA */}
+        {isOwner && (
+          <>
+            <KpiCard
+              title="Pemasukan Hari Ini"
               value={
-                summary.purchaseToday
+                <Currency
+                  value={
+                    summary.income
+                  }
+                />
+              }
+              subtitle="Bagian pendapatan Bunbun"
+              icon={
+                <MdAttachMoney />
+              }
+              tone="green"
+            />
+
+            <KpiCard
+              title="Pengeluaran Hari Ini"
+              value={
+                <Currency
+                  value={
+                    summary.expense
+                  }
+                />
+              }
+              subtitle="Seluruh biaya operasional"
+              icon={
+                <MdMoneyOff />
+              }
+              tone="red"
+            />
+
+            <KpiCard
+              title="Saldo Hari Ini"
+              value={
+                <Currency
+                  value={
+                    summary.profit
+                  }
+                />
+              }
+              subtitle="Pemasukan dikurangi pengeluaran"
+              icon={
+                <MdAccountBalanceWallet />
+              }
+              tone={
+                summary.profit >= 0
+                  ? "amber"
+                  : "red"
               }
             />
-          }
-          subtitle="Pembelian bahan baku"
-          icon={<MdShoppingCart />}
-          tone="amber"
-        />
+          </>
+        )}
 
+        {/* PEMBELIAN — OWNER + BAKER */}
+        {canSeePurchase && (
+          <KpiCard
+            title="Pembelian Hari Ini"
+            value={
+              <Currency
+                value={
+                  summary.purchaseToday
+                }
+              />
+            }
+            subtitle="Pembelian bahan baku"
+            icon={
+              <MdShoppingCart />
+            }
+            tone="amber"
+          />
+        )}
+
+        {/* OPERASIONAL — SEMUA ROLE */}
         <KpiCard
           title="Hasil Produksi"
-          value={`${summary.finishedQty.toLocaleString(
+          value={`${Number(
+            summary.finishedQty || 0
+          ).toLocaleString(
             "id-ID"
           )} pcs`}
           subtitle="Produk selesai hari ini"
-          icon={<MdBakeryDining />}
+          icon={
+            <MdBakeryDining />
+          }
           tone="blue"
         />
 
         <KpiCard
           title="Batch Aktif"
-          value={summary.activeBatch}
+          value={
+            summary.activeBatch || 0
+          }
           subtitle="Batch belum Finished"
-          icon={<MdViewKanban />}
+          icon={
+            <MdViewKanban />
+          }
           tone="amber"
         />
 
         <KpiCard
           title="Production Order"
           value={
-            summary.productionOrders
+            summary.productionOrders ||
+            0
           }
-          subtitle={`${summary.draftOrders} Draft · ${summary.generatedOrders} Generated`}
-          icon={<MdFactory />}
+          subtitle={`${summary.draftOrders || 0} Draft · ${
+            summary.generatedOrders ||
+            0
+          } Generated`}
+          icon={
+            <MdFactory />
+          }
           tone="gray"
         />
 
@@ -203,7 +277,9 @@ export default function Dashboard() {
               ? "Bahan perlu diperiksa"
               : "Semua stok dalam batas aman"
           }
-          icon={<MdWarning />}
+          icon={
+            <MdWarning />
+          }
           tone={
             lowStockCount > 0
               ? "red"
@@ -214,7 +290,12 @@ export default function Dashboard() {
 
       <div className="mt-8">
         <BusinessIntelligence
-          data={businessIntelligence}
+          data={
+            businessIntelligence
+          }
+          showFinance={
+            isOwner
+          }
         />
       </div>
     </div>
