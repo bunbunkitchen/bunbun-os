@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import {
   fromBaseUnit,
   toBaseUnit,
+  roundQuantity,
 } from "../utils/unitConverter";
 
 const INCOMING_TRANSACTION_TYPES = [
@@ -630,11 +631,12 @@ export async function getBusinessIntelligence() {
         ingredient.satuan
       );
 
-    const displayStock =
-      fromBaseUnit(
-        stockBase,
-        ingredient.satuan
-      );
+    const displayStock = roundQuantity(
+  fromBaseUnit(
+    stockBase,
+    ingredient.satuan
+  )
+);
 
     return {
       id: ingredient.id,

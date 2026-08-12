@@ -289,3 +289,20 @@ export function formatBaseQuantity(
     unit: normalizedUnit,
   };
 }
+
+export function roundQuantity(
+  value,
+  decimals = 6
+) {
+  const number = Number(value || 0);
+
+  if (!Number.isFinite(number)) {
+    return 0;
+  }
+
+  const factor = 10 ** decimals;
+
+  return Math.round(
+    (number + Number.EPSILON) * factor
+  ) / factor;
+}

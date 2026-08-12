@@ -4,6 +4,7 @@ import {
   fromBaseUnit,
   getBaseUnit,
   toBaseUnit,
+  roundQuantity,
 } from "../utils/unitConverter";
 
 const TABLE_NAME =
@@ -416,16 +417,20 @@ export async function createProductionOutMovements({
         getBaseUnit(item.satuan);
 
       const stockDisplay =
-        fromBaseUnit(
-          stockBase,
-          displayUnit
-        );
+  roundQuantity(
+    fromBaseUnit(
+      stockBase,
+      displayUnit
+    )
+  );
 
-      const kebutuhanDisplay =
-        fromBaseUnit(
-          kebutuhanBase,
-          displayUnit
-        );
+const kebutuhanDisplay =
+  roundQuantity(
+    fromBaseUnit(
+      kebutuhanBase,
+      displayUnit
+    )
+  );
 
       throw new Error(
         `Stok ${
