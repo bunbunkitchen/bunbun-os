@@ -238,7 +238,14 @@ export default function Inventory() {
       }
     });
 
-    return Array.from(map.values());
+    // Inventory/reference lists are always displayed A-Z by item name.
+    return Array.from(map.values()).sort((a, b) =>
+      String(a.itemNama || "").localeCompare(
+        String(b.itemNama || ""),
+        "id",
+        { sensitivity: "base" }
+      )
+    );
   }, [transactions]);
 
   const stockColumns = [
