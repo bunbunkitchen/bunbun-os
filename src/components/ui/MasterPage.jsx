@@ -60,11 +60,32 @@ export default function MasterPage({
     const keyword =
       search.trim().toLowerCase();
 
+    const isInactive = (item) => {
+      const status = String(
+        item.status || ""
+      )
+        .trim()
+        .toLowerCase();
+
+      return [
+        "nonaktif",
+        "tidak aktif",
+        "inactive",
+        "disabled",
+      ].includes(status);
+    };
+
+    const sortedData = [...data].sort(
+      (a, b) =>
+        Number(isInactive(a)) -
+        Number(isInactive(b))
+    );
+
     if (!keyword) {
-      return data;
+      return sortedData;
     }
 
-    return data.filter((item) =>
+    return sortedData.filter((item) =>
       Object.values(item).some((value) => {
         if (
           value === null ||
