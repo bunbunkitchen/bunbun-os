@@ -331,6 +331,7 @@ export default function IngredientForm({
         <Button
           onClick={onCancel}
           disabled={saving}
+          className="!bg-[#F3E2DF] !text-[#9A625B] !border !border-[#E7CFCA] hover:!bg-[#EAD3CF] hover:!text-[#87534D]"
         >
           Batal
         </Button>
@@ -338,6 +339,7 @@ export default function IngredientForm({
         <Button
           onClick={handleSubmit}
           disabled={saving}
+          className="!bg-[#E8EDE2] !text-[#5F6F4F] !border !border-[#D5DDCA] hover:!bg-[#DCE4D3] hover:!text-[#4F5F42]"
         >
           {saving
             ? "Menyimpan..."
