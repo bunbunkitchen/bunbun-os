@@ -5,15 +5,14 @@ export default function Button({
   disabled = false,
   className = "",
 }) {
-  const normalizedClassName = className
-    .replace(
-      "bg-blue-600 hover:bg-blue-700",
-      "bg-[#E8EDE2] text-[#5F6F4F] border border-[#D5DDCA] hover:bg-[#DCE4D3] hover:text-[#4F5F42]"
-    )
-    .replace(
-      "bg-red-600 hover:bg-red-700",
-      "bg-[#F3E2DF] text-[#9A625B] border border-[#E7CFCA] hover:bg-[#EAD3CF] hover:text-[#87534D]"
-    );
+  const isEditButton = className.includes("bg-blue-600");
+  const isDeleteButton = className.includes("bg-red-600");
+
+  const normalizedClassName = isEditButton
+    ? "!bg-[#E8EDE2] !text-[#5F6F4F] !border !border-[#D5DDCA] hover:!bg-[#DCE4D3] hover:!text-[#4F5F42]"
+    : isDeleteButton
+      ? "!bg-[#F3E2DF] !text-[#9A625B] !border !border-[#E7CFCA] hover:!bg-[#EAD3CF] hover:!text-[#87534D]"
+      : className;
 
   return (
     <button
