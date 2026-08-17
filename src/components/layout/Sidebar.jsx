@@ -95,7 +95,7 @@ const menus = [
     name: "Penjualan",
     path: "/sales",
     icon: <MdPointOfSale />,
-    roles: ["owner"],
+    roles: ["owner", "baker"],
   },
   {
     name: "Pengeluaran",
