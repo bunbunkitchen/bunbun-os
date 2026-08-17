@@ -104,7 +104,7 @@ export default function MasterPage({
               disabled={
                 saving || deleting
               }
-              className="bg-blue-600 hover:bg-blue-700"
+              className="!bg-[#E8EDE2] !text-[#5F6F4F] shadow-sm hover:!bg-[#DCE4D3] hover:!text-[#4F5F42]"
             >
               {editButtonText}
             </Button>
@@ -118,7 +118,7 @@ export default function MasterPage({
               disabled={
                 saving || deleting
               }
-              className="bg-red-600 hover:bg-red-700"
+              className="!bg-[#F3E2DF] !text-[#9A625B] shadow-sm hover:!bg-[#EAD3CF] hover:!text-[#87534D]"
             >
               {deleteButtonText}
             </Button>
