@@ -10,6 +10,7 @@ import PageTitle from "../../components/ui/PageTitle";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { useToast } from "../../context/ToastContext";
 import { createProductionOutMovements } from "../../services/inventoryService";
+import { getAllIngredients } from "../../services/ingredientService";
 import { getProductionBatchSplits, getProductStockErrorMessage } from "../../services/productStockService";
 import {
   getAllProductionBatches,
@@ -59,13 +60,50 @@ export default function ProductionBatches() {
     if (!batch.recipeId || !batch.recipeYield) {
       throw new Error("Recipe atau yield pada batch belum valid.");
     }
+
     const recipeItems = await getRecipeItems(batch.recipeId);
     if (!recipeItems.length) throw new Error("Recipe belum mempunyai komposisi bahan.");
+
+    const ingredients = await getAllIngredients();
+    const ingredientByName = new Map(
+      ingredients.map((ingredient) => [
+        ingredient.nama.trim().toLowerCase(),
+        ingredient,
+      ])
+    );
+
+    const resolvedItems = recipeItems.map((item) => {
+      if (!item.subRecipeId) {
+        return item;
+      }
+
+      const subRecipeName = String(item.subRecipeNama || "").trim();
+      const linkedIngredient = ingredientByName.get(
+        subRecipeName.toLowerCase()
+      );
+
+      if (!linkedIngredient) {
+        throw new Error(
+          `Sub-recipe ${subRecipeName || "tanpa nama"} belum memiliki bahan inventory dengan nama yang sama.`
+        );
+      }
+
+      return {
+        ...item,
+        ingredientId: linkedIngredient.id,
+        ingredientNama: linkedIngredient.nama,
+      };
+    });
+
     await createProductionOutMovements({
       tanggal: batch.tanggal,
       productionBatchId: batch.id,
       recipeId: batch.recipeId,
-      ingredients: scaleRecipeIngredients(recipeItems, batch.recipeYield, batch.target),
+      ingredients: scaleRecipeIngredients(
+        resolvedItems,
+        batch.recipeYield,
+        batch.target
+      ),
     });
   }
 
