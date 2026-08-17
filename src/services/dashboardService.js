@@ -19,69 +19,45 @@ const OUTGOING_TRANSACTION_TYPES = [
   "ADJUSTMENT_OUT",
 ];
 
-function getLocalDateString(
-  date = new Date()
-) {
+function getLocalDateString(date = new Date()) {
   const year = date.getFullYear();
-
-  const month = String(
-    date.getMonth() + 1
-  ).padStart(2, "0");
-
-  const day = String(
-    date.getDate()
-  ).padStart(2, "0");
-
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
 function getCurrentMonthRange() {
   const now = new Date();
-
   const year = now.getFullYear();
   const monthIndex = now.getMonth();
 
-  const monthStart =
-    getLocalDateString(
-      new Date(
-        year,
-        monthIndex,
-        1
-      )
-    );
+  const monthStart = getLocalDateString(
+    new Date(year, monthIndex, 1)
+  );
 
-  const monthEnd =
-    getLocalDateString(
-      new Date(
-        year,
-        monthIndex + 1,
-        0
-      )
-    );
+  const monthEnd = getLocalDateString(
+    new Date(year, monthIndex + 1, 0)
+  );
 
-  return {
-    monthStart,
-    monthEnd,
-  };
+  return { monthStart, monthEnd };
 }
 
 function sumBy(rows, field) {
   return (rows ?? []).reduce(
-    (total, row) =>
-      total +
-      Number(row[field] || 0),
+    (total, row) => total + Number(row[field] || 0),
     0
   );
 }
 
 function validateResults(results) {
-  const failedResult = results.find(
-    (result) => result.error
-  );
-
+  const failedResult = results.find((result) => result.error);
   if (failedResult?.error) {
     throw failedResult.error;
   }
+}
+
+function isSaleableRecipe(recipe) {
+  return !recipe?.output_ingredient_id;
 }
 
 async function getCurrentRole() {
@@ -95,9 +71,7 @@ async function getCurrentRole() {
   }
 
   if (!user) {
-    throw new Error(
-      "Pengguna belum login."
-    );
+    throw new Error("Pengguna belum login.");
   }
 
   const { data, error } = await supabase
@@ -117,23 +91,12 @@ async function getCurrentRole() {
 
 export async function getDashboardSummary() {
   const today = getLocalDateString();
-
   const role = await getCurrentRole();
+  const isOwner = role === "owner";
+  const isBaker = role === "baker";
+  const canSeePurchase = isOwner || isBaker;
 
-  const isOwner =
-    role === "owner";
-
-  const isBaker =
-    role === "baker";
-
-  const canSeePurchase =
-    isOwner || isBaker;
-
-  const [
-    orderResult,
-    batchResult,
-    inventoryResult,
-  ] = await Promise.all([
+  const [orderResult, batchResult, inventoryResult] = await Promise.all([
     supabase
       .from("production_orders")
       .select("id, status")
@@ -153,7 +116,8 @@ export async function getDashboardSummary() {
           tanggal,
           recipes (
             kode,
-            nama
+            nama,
+            output_ingredient_id
           )
         )
       `)
@@ -166,21 +130,14 @@ export async function getDashboardSummary() {
       .eq("is_deleted", false),
   ]);
 
-  validateResults([
-    orderResult,
-    batchResult,
-    inventoryResult,
-  ]);
+  validateResults([orderResult, batchResult, inventoryResult]);
 
   let income = 0;
   let expense = 0;
   let purchaseToday = 0;
 
   if (isOwner) {
-    const [
-      incomeResult,
-      expenseResult,
-    ] = await Promise.all([
+    const [incomeResult, expenseResult] = await Promise.all([
       supabase
         .from("incomes")
         .select("pemasukan_bunbun")
@@ -194,89 +151,63 @@ export async function getDashboardSummary() {
         .eq("is_deleted", false),
     ]);
 
-    validateResults([
-      incomeResult,
-      expenseResult,
-    ]);
+    validateResults([incomeResult, expenseResult]);
 
-    income = sumBy(
-      incomeResult.data,
-      "pemasukan_bunbun"
-    );
-
-    expense = sumBy(
-      expenseResult.data,
-      "nominal"
-    );
+    income = sumBy(incomeResult.data, "pemasukan_bunbun");
+    expense = sumBy(expenseResult.data, "nominal");
   }
 
   if (canSeePurchase) {
-    const purchaseResult =
-      await supabase
-        .from("purchases")
-        .select("total")
-        .eq("tanggal", today)
-        .eq("is_deleted", false);
+    const purchaseResult = await supabase
+      .from("purchases")
+      .select("total")
+      .eq("tanggal", today)
+      .eq("is_deleted", false);
 
     if (purchaseResult.error) {
       throw purchaseResult.error;
     }
 
-    purchaseToday = sumBy(
-      purchaseResult.data,
-      "total"
-    );
+    purchaseToday = sumBy(purchaseResult.data, "total");
   }
 
-  const orders =
-    orderResult.data ?? [];
+  const orders = orderResult.data ?? [];
 
-  const todayBatches = (
-    batchResult.data ?? []
-  ).filter(
-    (batch) =>
-      batch.production_orders?.tanggal ===
-      today
+  const todayBatches = (batchResult.data ?? []).filter(
+    (batch) => batch.production_orders?.tanggal === today
   );
 
-  const draftOrders =
-    orders.filter(
-      (order) =>
-        order.status === "Draft"
-    ).length;
+  const draftOrders = orders.filter(
+    (order) => order.status === "Draft"
+  ).length;
 
-  const generatedOrders =
-    orders.filter(
-      (order) =>
-        order.status === "Generated"
-    ).length;
+  const generatedOrders = orders.filter(
+    (order) => order.status === "Generated"
+  ).length;
 
-  const activeBatches =
-    todayBatches.filter(
-      (batch) =>
-        batch.status !== "Finished" &&
-        batch.status !== "Cancelled"
-    );
+  const activeBatches = todayBatches.filter(
+    (batch) =>
+      batch.status !== "Finished" &&
+      batch.status !== "Cancelled"
+  );
 
-  const finishedBatches =
-    todayBatches.filter(
-      (batch) =>
-        batch.status === "Finished"
-    );
+  const finishedBatches = todayBatches.filter(
+    (batch) =>
+      batch.status === "Finished" &&
+      isSaleableRecipe(batch.production_orders?.recipes)
+  );
 
-  const finishedQty =
-    finishedBatches.reduce(
-      (total, batch) =>
-        total +
-        Number(batch.selesai || 0),
-      0
-    );
+  const finishedQty = finishedBatches.reduce(
+    (total, batch) => total + Number(batch.selesai || 0),
+    0
+  );
 
-  const rejectedQty =
-    todayBatches.reduce(
-      (total, batch) =>
-        total +
-        Number(batch.reject || 0),
+  const rejectedQty = todayBatches
+    .filter((batch) =>
+      isSaleableRecipe(batch.production_orders?.recipes)
+    )
+    .reduce(
+      (total, batch) => total + Number(batch.reject || 0),
       0
     );
 
@@ -286,74 +217,44 @@ export async function getDashboardSummary() {
     profit: income - expense,
     purchaseToday,
 
-    productionOrders:
-      orders.length,
+    productionOrders: orders.length,
 
     draftOrders,
     generatedOrders,
 
-    activeBatch:
-      activeBatches.length,
-
-    finishedBatch:
-      finishedBatches.length,
+    activeBatch: activeBatches.length,
+    finishedBatch: finishedBatches.length,
 
     finishedQty,
     rejectedQty,
 
-    inventoryTransactions:
-      inventoryResult.data?.length ?? 0,
+    inventoryTransactions: inventoryResult.data?.length ?? 0,
 
-    activeBatchItems:
-      activeBatches.map((batch) => ({
-        id: batch.id,
-        kode: batch.kode,
+    activeBatchItems: activeBatches.map((batch) => ({
+      id: batch.id,
+      kode: batch.kode,
 
-        recipeKode:
-          batch.production_orders
-            ?.recipes?.kode ?? "",
+      recipeKode:
+        batch.production_orders?.recipes?.kode ?? "",
 
-        recipeNama:
-          batch.production_orders
-            ?.recipes?.nama ?? "",
+      recipeNama:
+        batch.production_orders?.recipes?.nama ?? "",
 
-        target: Number(
-          batch.target || 0
-        ),
-
-        selesai: Number(
-          batch.selesai || 0
-        ),
-
-        reject: Number(
-          batch.reject || 0
-        ),
-
-        status: batch.status,
-      })),
+      target: Number(batch.target || 0),
+      selesai: Number(batch.selesai || 0),
+      reject: Number(batch.reject || 0),
+      status: batch.status,
+    })),
   };
 }
 
 export async function getBusinessIntelligence() {
-  const today =
-    getLocalDateString();
+  const today = getLocalDateString();
+  const role = await getCurrentRole();
+  const isOwner = role === "owner";
+  const { monthStart, monthEnd } = getCurrentMonthRange();
 
-  const role =
-    await getCurrentRole();
-
-  const isOwner =
-    role === "owner";
-
-  const {
-    monthStart,
-    monthEnd,
-  } = getCurrentMonthRange();
-
-  const [
-    batchResult,
-    ingredientResult,
-    inventoryResult,
-  ] = await Promise.all([
+  const [batchResult, ingredientResult, inventoryResult] = await Promise.all([
     supabase
       .from("production_batches")
       .select(`
@@ -367,7 +268,8 @@ export async function getBusinessIntelligence() {
           tanggal,
           recipes (
             kode,
-            nama
+            nama,
+            output_ingredient_id
           )
         )
       `)
@@ -393,63 +295,33 @@ export async function getBusinessIntelligence() {
         qty,
         unit
       `)
-      .not(
-        "ingredient_id",
-        "is",
-        null
-      )
+      .not("ingredient_id", "is", null)
       .eq("is_deleted", false),
   ]);
 
-  validateResults([
-    batchResult,
-    ingredientResult,
-    inventoryResult,
-  ]);
+  validateResults([batchResult, ingredientResult, inventoryResult]);
 
   let monthlyIncome = 0;
   let monthlyExpense = 0;
 
   if (isOwner) {
-    const [
-      incomeResult,
-      expenseResult,
-    ] = await Promise.all([
+    const [incomeResult, expenseResult] = await Promise.all([
       supabase
         .from("incomes")
-        .select(
-          "tanggal, pemasukan_bunbun"
-        )
-        .gte(
-          "tanggal",
-          monthStart
-        )
-        .lte(
-          "tanggal",
-          monthEnd
-        )
+        .select("tanggal, pemasukan_bunbun")
+        .gte("tanggal", monthStart)
+        .lte("tanggal", monthEnd)
         .eq("is_deleted", false),
 
       supabase
         .from("expenses")
-        .select(
-          "tanggal, nominal"
-        )
-        .gte(
-          "tanggal",
-          monthStart
-        )
-        .lte(
-          "tanggal",
-          monthEnd
-        )
+        .select("tanggal, nominal")
+        .gte("tanggal", monthStart)
+        .lte("tanggal", monthEnd)
         .eq("is_deleted", false),
     ]);
 
-    validateResults([
-      incomeResult,
-      expenseResult,
-    ]);
+    validateResults([incomeResult, expenseResult]);
 
     monthlyIncome = sumBy(
       incomeResult.data,
@@ -462,127 +334,84 @@ export async function getBusinessIntelligence() {
     );
   }
 
-  const monthBatches = (
-    batchResult.data ?? []
-  ).filter((batch) => {
-    const productionDate =
-      batch.production_orders
-        ?.tanggal;
+  const monthBatches = (batchResult.data ?? []).filter((batch) => {
+    const productionDate = batch.production_orders?.tanggal;
 
     return (
       productionDate &&
-      productionDate >=
-        monthStart &&
-      productionDate <=
-        monthEnd
+      productionDate >= monthStart &&
+      productionDate <= monthEnd
     );
   });
 
-  const todayBatches =
-    monthBatches.filter(
-      (batch) =>
-        batch.production_orders
-          ?.tanggal === today
-    );
+  // Sub-recipes are intermediate stock, not finished/saleable products.
+  // Keep them available for operational batch monitoring, but exclude them
+  // from product KPIs and the "Top Produk Bulan Ini" ranking.
+  const saleableMonthBatches = monthBatches.filter((batch) =>
+    isSaleableRecipe(batch.production_orders?.recipes)
+  );
 
-  const todayFinished =
-    todayBatches.reduce(
-      (total, batch) =>
-        total +
-        Number(batch.selesai || 0),
-      0
-    );
+  const todayBatches = saleableMonthBatches.filter(
+    (batch) => batch.production_orders?.tanggal === today
+  );
 
-  const todayReject =
-    todayBatches.reduce(
-      (total, batch) =>
-        total +
-        Number(batch.reject || 0),
-      0
-    );
+  const todayFinished = todayBatches.reduce(
+    (total, batch) => total + Number(batch.selesai || 0),
+    0
+  );
 
-  const rejectBase =
-    todayFinished + todayReject;
+  const todayReject = todayBatches.reduce(
+    (total, batch) => total + Number(batch.reject || 0),
+    0
+  );
+
+  const rejectBase = todayFinished + todayReject;
 
   const rejectRate =
-    rejectBase > 0
-      ? (todayReject /
-          rejectBase) *
-        100
-      : 0;
+    rejectBase > 0 ? (todayReject / rejectBase) * 100 : 0;
 
-  const productionByRecipeMap =
-    new Map();
+  const productionByRecipeMap = new Map();
 
-  monthBatches.forEach((batch) => {
-    const recipe =
-      batch.production_orders
-        ?.recipes;
-
-    const recipeCode =
-      recipe?.kode ||
-      "TANPA-KODE";
+  saleableMonthBatches.forEach((batch) => {
+    const recipe = batch.production_orders?.recipes;
+    const recipeCode = recipe?.kode || "TANPA-KODE";
 
     const current =
-      productionByRecipeMap.get(
-        recipeCode
-      ) || {
+      productionByRecipeMap.get(recipeCode) || {
         kode: recipeCode,
-
-        nama:
-          recipe?.nama ||
-          "Recipe tidak diketahui",
-
+        nama: recipe?.nama || "Recipe tidak diketahui",
         selesai: 0,
         reject: 0,
       };
 
-    current.selesai += Number(
-      batch.selesai || 0
-    );
+    current.selesai += Number(batch.selesai || 0);
+    current.reject += Number(batch.reject || 0);
 
-    current.reject += Number(
-      batch.reject || 0
-    );
-
-    productionByRecipeMap.set(
-      recipeCode,
-      current
-    );
+    productionByRecipeMap.set(recipeCode, current);
   });
 
-  const productionByRecipe =
-    Array.from(
-      productionByRecipeMap.values()
-    ).sort(
-      (first, second) =>
-        second.selesai -
-        first.selesai
-    );
+  const productionByRecipe = Array.from(
+    productionByRecipeMap.values()
+  ).sort(
+    (first, second) => second.selesai - first.selesai
+  );
 
-  const stockBaseMap =
-    new Map();
+  const stockBaseMap = new Map();
 
-  (
-    inventoryResult.data ?? []
-  ).forEach((transaction) => {
-    const ingredientId =
-      transaction.ingredient_id;
+  (inventoryResult.data ?? []).forEach((transaction) => {
+    const ingredientId = transaction.ingredient_id;
 
     if (!ingredientId) {
       return;
     }
 
     const currentStockBase =
-      stockBaseMap.get(
-        ingredientId
-      ) || 0;
+      stockBaseMap.get(ingredientId) || 0;
 
-    const quantityBase =
-      toBaseUnit(
-        transaction.qty,
-        transaction.unit
-      );
+    const quantityBase = toBaseUnit(
+      transaction.qty,
+      transaction.unit
+    );
 
     if (
       INCOMING_TRANSACTION_TYPES.includes(
@@ -591,8 +420,7 @@ export async function getBusinessIntelligence() {
     ) {
       stockBaseMap.set(
         ingredientId,
-        currentStockBase +
-          quantityBase
+        currentStockBase + quantityBase
       );
 
       return;
@@ -605,96 +433,62 @@ export async function getBusinessIntelligence() {
     ) {
       stockBaseMap.set(
         ingredientId,
-        currentStockBase -
-          quantityBase
+        currentStockBase - quantityBase
       );
     }
   });
 
-  const stockItems = (
-    ingredientResult.data ?? []
-  ).map((ingredient) => {
-    const stockBase =
-      stockBaseMap.get(
-        ingredient.id
-      ) || 0;
+  const stockItems = (ingredientResult.data ?? []).map((ingredient) => {
+    const stockBase = stockBaseMap.get(ingredient.id) || 0;
 
-    const minimumStock =
-      Number(
-        ingredient.minimum_stok ||
-          0
-      );
+    const minimumStock = Number(ingredient.minimum_stok || 0);
 
-    const minimumStockBase =
-      toBaseUnit(
-        minimumStock,
-        ingredient.satuan
-      );
+    const minimumStockBase = toBaseUnit(
+      minimumStock,
+      ingredient.satuan
+    );
 
     const displayStock = roundQuantity(
-  fromBaseUnit(
-    stockBase,
-    ingredient.satuan
-  )
-);
+      fromBaseUnit(stockBase, ingredient.satuan)
+    );
 
     return {
       id: ingredient.id,
       kode: ingredient.kode,
       nama: ingredient.nama,
-      satuan:
-        ingredient.satuan,
+      satuan: ingredient.satuan,
 
       stok: displayStock,
       stokBase: stockBase,
 
-      minimumStok:
-        minimumStock,
+      minimumStok: minimumStock,
+      minimumStokBase: minimumStockBase,
 
-      minimumStokBase:
-        minimumStockBase,
-
-      isLowStock:
-        stockBase <=
-        minimumStockBase,
+      isLowStock: stockBase <= minimumStockBase,
     };
   });
 
-  const lowStockItems =
-    stockItems
-      .filter(
-        (ingredient) =>
-          ingredient.isLowStock
-      )
-      .sort(
-        (first, second) =>
-          first.stokBase -
-          second.stokBase
-      );
-
-  const monthlyFinished =
-    monthBatches.reduce(
-      (total, batch) =>
-        total +
-        Number(batch.selesai || 0),
-      0
+  const lowStockItems = stockItems
+    .filter((ingredient) => ingredient.isLowStock)
+    .sort(
+      (first, second) => first.stokBase - second.stokBase
     );
 
-  const monthlyReject =
-    monthBatches.reduce(
-      (total, batch) =>
-        total +
-        Number(batch.reject || 0),
-      0
-    );
+  const monthlyFinished = saleableMonthBatches.reduce(
+    (total, batch) => total + Number(batch.selesai || 0),
+    0
+  );
+
+  const monthlyReject = saleableMonthBatches.reduce(
+    (total, batch) => total + Number(batch.reject || 0),
+    0
+  );
 
   return {
     monthlyIncome,
     monthlyExpense,
 
-    monthlyProfit:
-      monthlyIncome -
-      monthlyExpense,
+    monthlyProfit: monthlyIncome - monthlyExpense,
 
     todayFinished,
     todayReject,
@@ -706,57 +500,35 @@ export async function getBusinessIntelligence() {
     productionByRecipe,
 
     lowStockItems,
+    lowStockCount: lowStockItems.length,
 
-    lowStockCount:
-      lowStockItems.length,
-
-    activeBatchItems: (
-      batchResult.data ?? []
-    )
+    activeBatchItems: (batchResult.data ?? [])
       .filter(
         (batch) =>
-          batch.status !==
-            "Finished" &&
-          batch.status !==
-            "Cancelled"
+          batch.status !== "Finished" &&
+          batch.status !== "Cancelled"
       )
       .map((batch) => ({
         id: batch.id,
         kode: batch.kode,
 
-        tanggal:
-          batch.production_orders
-            ?.tanggal ?? "",
+        tanggal: batch.production_orders?.tanggal ?? "",
 
         recipeKode:
-          batch.production_orders
-            ?.recipes?.kode ?? "",
+          batch.production_orders?.recipes?.kode ?? "",
 
         recipeNama:
-          batch.production_orders
-            ?.recipes?.nama ?? "",
+          batch.production_orders?.recipes?.nama ?? "",
 
-        target: Number(
-          batch.target || 0
-        ),
-
-        selesai: Number(
-          batch.selesai || 0
-        ),
-
-        reject: Number(
-          batch.reject || 0
-        ),
-
+        target: Number(batch.target || 0),
+        selesai: Number(batch.selesai || 0),
+        reject: Number(batch.reject || 0),
         status: batch.status,
       }))
-      .sort(
-        (first, second) =>
-          String(
-            second.tanggal
-          ).localeCompare(
-            String(first.tanggal)
-          )
+      .sort((first, second) =>
+        String(second.tanggal).localeCompare(
+          String(first.tanggal)
+        )
       ),
   };
 }
