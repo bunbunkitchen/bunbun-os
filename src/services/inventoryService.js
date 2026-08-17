@@ -611,3 +611,35 @@ export async function createNonPurchaseStockAddition(addition) {
 
   return data;
 }
+
+export async function createInventoryAdjustment(adjustment) {
+  const { data, error } = await supabase.rpc(
+    "record_inventory_adjustment",
+    {
+      p_transaction_date: adjustment.tanggal,
+      p_ingredient_id: adjustment.ingredientId,
+      p_adjustment_type: adjustment.jenis,
+      p_qty: adjustment.jumlah,
+      p_unit: adjustment.satuan,
+      p_reason: adjustment.alasan,
+      p_notes: adjustment.keterangan || null,
+      p_operation_key: adjustment.operationKey,
+    }
+  );
+
+  if (error) {
+    if (
+      error.message?.includes(
+        "record_inventory_adjustment"
+      )
+    ) {
+      throw new Error(
+        "Fitur stock adjustment belum terpasang di database."
+      );
+    }
+
+    throw error;
+  }
+
+  return data;
+}

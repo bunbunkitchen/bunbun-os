@@ -55,13 +55,13 @@ export default function RecipeDetail() {
     useState(null);
 
   const [
-    selectedIngredient,
-    setSelectedIngredient,
+    selectedItem,
+    setSelectedItem,
   ] = useState(null);
 
   const [
-    deleteIngredient,
-    setDeleteIngredient,
+    deleteItem,
+    setDeleteItem,
   ] = useState(null);
 
   const [saving, setSaving] =
@@ -79,6 +79,7 @@ export default function RecipeDetail() {
   useEffect(() => {
     async function loadRecipeDetail() {
       try {
+        setLoading(true);
         setPageError("");
 
         const recipeData =
@@ -111,6 +112,13 @@ export default function RecipeDetail() {
     loadRecipeDetail();
   }, [recipeKode]);
 
+  /*
+   * TOTAL HPP RECIPE
+   *
+   * Calculator sudah menangani:
+   * - Bahan baku
+   * - Sub-recipe
+   */
   const totalCost = useMemo(
     () =>
       calculateRecipeCost(
@@ -119,6 +127,9 @@ export default function RecipeDetail() {
     [ingredients]
   );
 
+  /*
+   * HPP PER YIELD
+   */
   const costPerYield = useMemo(
     () =>
       calculateCostPerYield(
@@ -127,27 +138,55 @@ export default function RecipeDetail() {
       ),
     [
       totalCost,
-      recipe,
+      recipe?.yield,
     ]
   );
 
+  /*
+   * ID bahan baku yang sudah
+   * digunakan di Recipe.
+   */
   const usedIngredientIds =
     useMemo(
       () =>
-        ingredients.map(
-          (item) =>
-            item.ingredientId
-        ),
+        ingredients
+          .filter(
+            (item) =>
+              item.ingredientId
+          )
+          .map(
+            (item) =>
+              item.ingredientId
+          ),
+      [ingredients]
+    );
+
+  /*
+   * ID sub-recipe yang sudah
+   * digunakan di Recipe.
+   */
+  const usedSubRecipeIds =
+    useMemo(
+      () =>
+        ingredients
+          .filter(
+            (item) =>
+              item.subRecipeId
+          )
+          .map(
+            (item) =>
+              item.subRecipeId
+          ),
       [ingredients]
     );
 
   function openCreateForm() {
-    setSelectedIngredient(null);
+    setSelectedItem(null);
     setFormMode("create");
   }
 
   function openEditForm(item) {
-    setSelectedIngredient(item);
+    setSelectedItem(item);
     setFormMode("edit");
   }
 
@@ -156,7 +195,7 @@ export default function RecipeDetail() {
       return;
     }
 
-    setSelectedIngredient(null);
+    setSelectedItem(null);
     setFormMode(null);
   }
 
@@ -173,23 +212,47 @@ export default function RecipeDetail() {
 
       if (
         formMode === "edit" &&
-        selectedIngredient
+        selectedItem
       ) {
         const updatedItem =
           await updateRecipeItem(
-            selectedIngredient.id,
+            selectedItem.id,
             values
           );
 
-        setIngredients((previous) =>
-          previous
-            .map((item) =>
-              item.id ===
-              updatedItem.id
-                ? updatedItem
-                : item
-            )
-            .sort(
+        setIngredients(
+          (previous) =>
+            previous
+              .map((item) =>
+                item.id ===
+                updatedItem.id
+                  ? updatedItem
+                  : item
+              )
+              .sort(
+                (a, b) =>
+                  a.urutan -
+                  b.urutan
+              )
+        );
+
+        toast.success(
+          "Item Recipe berhasil diperbarui."
+        );
+      } else {
+        const savedItem =
+          await createRecipeItem({
+            ...values,
+            recipeId:
+              recipe.id,
+          });
+
+        setIngredients(
+          (previous) =>
+            [
+              ...previous,
+              savedItem,
+            ].sort(
               (a, b) =>
                 a.urutan -
                 b.urutan
@@ -197,41 +260,23 @@ export default function RecipeDetail() {
         );
 
         toast.success(
-          "Bahan Recipe berhasil diperbarui."
-        );
-      } else {
-        const savedItem =
-          await createRecipeItem({
-            ...values,
-            recipeId: recipe.id,
-          });
-
-        setIngredients((previous) =>
-          [...previous, savedItem].sort(
-            (a, b) =>
-              a.urutan -
-              b.urutan
-          )
-        );
-
-        toast.success(
-          "Bahan berhasil ditambahkan ke Recipe."
+          "Item berhasil ditambahkan ke Recipe."
         );
       }
 
-      setSelectedIngredient(null);
+      setSelectedItem(null);
       setFormMode(null);
     } catch (error) {
       console.error(
-        "Gagal menyimpan bahan Recipe:",
+        "Gagal menyimpan Item Recipe:",
         error
       );
 
       const message =
         error.code === "23505"
-          ? "Bahan tersebut sudah ada dalam Recipe."
+          ? "Bahan atau Sub-Recipe tersebut sudah ada dalam Recipe."
           : error.message ||
-            "Bahan Recipe gagal disimpan.";
+            "Item Recipe gagal disimpan.";
 
       setPageError(message);
       toast.error(message);
@@ -242,9 +287,9 @@ export default function RecipeDetail() {
     }
   }
 
-  async function handleDeleteIngredient() {
+  async function handleDeleteItem() {
     if (
-      !deleteIngredient ||
+      !deleteItem ||
       deleting
     ) {
       return;
@@ -255,31 +300,32 @@ export default function RecipeDetail() {
       setPageError("");
 
       await softDeleteRecipeItem(
-        deleteIngredient.id
+        deleteItem.id
       );
 
-      setIngredients((previous) =>
-        previous.filter(
-          (item) =>
-            item.id !==
-            deleteIngredient.id
-        )
+      setIngredients(
+        (previous) =>
+          previous.filter(
+            (item) =>
+              item.id !==
+              deleteItem.id
+          )
       );
 
       toast.success(
-        "Bahan Recipe berhasil dihapus."
+        "Item Recipe berhasil dihapus."
       );
 
-      setDeleteIngredient(null);
+      setDeleteItem(null);
     } catch (error) {
       console.error(
-        "Gagal menghapus bahan Recipe:",
+        "Gagal menghapus Item Recipe:",
         error
       );
 
       const message =
         error.message ||
-        "Bahan Recipe gagal dihapus.";
+        "Item Recipe gagal dihapus.";
 
       setPageError(message);
       toast.error(message);
@@ -290,42 +336,106 @@ export default function RecipeDetail() {
 
   const columns = [
     {
-      key: "ingredientNama",
-      title: "Bahan",
-      render: (item) =>
-        `${item.ingredientKode} — ${item.ingredientNama}`,
+      key: "nama",
+      title: "Item",
+      render: (item) => {
+        if (item.subRecipeId) {
+          return (
+            <div>
+              <p className="font-medium text-gray-800">
+                {item.subRecipeKode}{" "}
+                —{" "}
+                {item.subRecipeNama}
+              </p>
+
+              <p className="text-xs text-gray-500">
+                Sub-Recipe
+              </p>
+            </div>
+          );
+        }
+
+        return (
+          <div>
+            <p className="font-medium text-gray-800">
+              {item.ingredientKode}{" "}
+              —{" "}
+              {item.ingredientNama}
+            </p>
+
+            <p className="text-xs text-gray-500">
+              Bahan Baku
+            </p>
+          </div>
+        );
+      },
     },
+
     {
       key: "jumlah",
       title: "Jumlah",
       render: (item) =>
-        `${item.jumlah.toLocaleString(
+        `${Number(
+          item.jumlah || 0
+        ).toLocaleString(
           "id-ID"
         )} ${item.satuan}`,
     },
+
+    /*
+     * HARGA PER SATUAN
+     *
+     * Sebelumnya Sub-Recipe
+     * ditampilkan sebagai "—".
+     *
+     * Sekarang kita tampilkan
+     * nilai yang diberikan oleh
+     * recipe item.
+     */
     {
       key: "hargaPerSatuan",
       title: "Harga per Satuan",
       render: (item) => (
         <Currency
           value={
-            item.hargaPerSatuan
+            Number(
+              item.hargaPerSatuan ||
+                0
+            )
           }
         />
       ),
     },
+
+    /*
+     * SUBTOTAL
+     *
+     * Sebelumnya Sub-Recipe
+     * ditampilkan sebagai "—".
+     *
+     * Sekarang semua item
+     * menggunakan:
+     *
+     * jumlah × hargaPerSatuan
+     */
     {
       key: "subtotal",
       title: "Subtotal",
       render: (item) => (
         <Currency
           value={
-            item.jumlah *
-            item.hargaPerSatuan
+            Number(
+              item.jumlah || 0
+            ) *
+            Number(
+              item.hargaPerSatuan ||
+                0
+            )
           }
         />
       ),
     },
+
     {
       key: "aksi",
       title: "Aksi",
@@ -336,7 +446,8 @@ export default function RecipeDetail() {
               openEditForm(item)
             }
             disabled={
-              saving || deleting
+              saving ||
+              deleting
             }
             className="bg-blue-600 hover:bg-blue-700"
           >
@@ -345,12 +456,11 @@ export default function RecipeDetail() {
 
           <Button
             onClick={() =>
-              setDeleteIngredient(
-                item
-              )
+              setDeleteItem(item)
             }
             disabled={
-              saving || deleting
+              saving ||
+              deleting
             }
             className="bg-red-600 hover:bg-red-700"
           >
@@ -363,7 +473,9 @@ export default function RecipeDetail() {
 
   if (loading) {
     return (
-      <LoadingState message="Memuat detail Recipe..." />
+      <LoadingState
+        message="Memuat detail Recipe..."
+      />
     );
   }
 
@@ -396,7 +508,9 @@ export default function RecipeDetail() {
       <div className="mb-6">
         <RecipeCostSummary
           totalCost={totalCost}
-          yieldQty={recipe.yield}
+          yieldQty={
+            recipe.yield
+          }
           yieldUnit={
             recipe.satuanYield
           }
@@ -419,9 +533,12 @@ export default function RecipeDetail() {
           </div>
 
           <Button
-            onClick={openCreateForm}
+            onClick={
+              openCreateForm
+            }
             disabled={
-              saving || deleting
+              saving ||
+              deleting
             }
           >
             + Tambah Bahan
@@ -442,25 +559,33 @@ export default function RecipeDetail() {
         {formMode && (
           <RecipeIngredientForm
             key={
-              selectedIngredient?.id ||
+              selectedItem?.id ||
               formMode
             }
-            recipeId={recipe.id}
+            recipeId={
+              recipe.id
+            }
             initialData={
               formMode === "edit"
-                ? selectedIngredient
+                ? selectedItem
                 : null
             }
             usedIngredientIds={
               usedIngredientIds
             }
+            usedSubRecipeIds={
+              usedSubRecipeIds
+            }
             nextOrder={
-              ingredients.length + 1
+              ingredients.length +
+              1
             }
             onSave={
               handleSaveIngredient
             }
-            onCancel={closeForm}
+            onCancel={
+              closeForm
+            }
             saving={saving}
           />
         )}
@@ -468,21 +593,24 @@ export default function RecipeDetail() {
 
       <ConfirmDialog
         open={Boolean(
-          deleteIngredient
+          deleteItem
         )}
-        title="Hapus Bahan Recipe"
+        title="Hapus Item Recipe"
         message={`Apakah Anda yakin ingin menghapus ${
-          deleteIngredient?.ingredientNama ||
-          "bahan ini"
+          deleteItem?.subRecipeId
+            ? deleteItem?.subRecipeNama ||
+              "Sub-Recipe ini"
+            : deleteItem?.ingredientNama ||
+              "bahan ini"
         } dari Recipe? Total HPP akan dihitung ulang otomatis.`}
         confirmText="Ya, Hapus"
         loading={deleting}
         onConfirm={
-          handleDeleteIngredient
+          handleDeleteItem
         }
         onCancel={() => {
           if (!deleting) {
-            setDeleteIngredient(null);
+            setDeleteItem(null);
           }
         }}
       />

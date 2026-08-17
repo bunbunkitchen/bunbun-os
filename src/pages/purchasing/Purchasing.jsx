@@ -31,8 +31,20 @@ export default function Purchasing() {
       try {
         setPageError("");
 
-        const data =
-          await getAllPurchases();
+        const data = await getAllPurchases();
+
+const maintenancePurchases = data.filter(
+  (item) => item.purchaseType === "MAINTENANCE"
+);
+
+console.log(
+  "MAINTENANCE DETAIL JSON:",
+  JSON.stringify(
+    maintenancePurchases,
+    null,
+    2
+  )
+);
 
         setPurchases(data);
       } catch (error) {
@@ -76,10 +88,12 @@ export default function Purchasing() {
         purchase.supplierNama || "-",
     },
     {
-      key: "ingredientNama",
-      title: "Bahan Baku",
+      key: "itemNama",
+      title: "Bahan Baku / Maintenance",
       render: (purchase) =>
-        `${purchase.ingredientKode} — ${purchase.ingredientNama}`,
+        purchase.itemNama
+          ? `${purchase.itemKode} — ${purchase.itemNama}`
+          : "-",
     },
     {
       key: "jumlah",
@@ -210,7 +224,7 @@ export default function Purchasing() {
           handleDeletePurchase
         }
         getItemLabel={(item) =>
-          `${item.ingredientNama} tanggal ${item.tanggal}`
+         `${item.itemNama} tanggal ${item.tanggal}`
         }
         emptyMessage="Belum ada pembelian"
       />

@@ -11,11 +11,14 @@ import {
   MdInventory,
   MdAcUnit,
   MdShoppingCart,
+  MdCleaningServices,
   MdSettings,
   MdViewKanban,
   MdAttachMoney,
+  MdPointOfSale,
   MdMoneyOff,
   MdAssessment,
+  MdBuild,
   MdClose,
 } from "react-icons/md";
 
@@ -89,6 +92,12 @@ const menus = [
     roles: ["owner"],
   },
   {
+    name: "Penjualan",
+    path: "/sales",
+    icon: <MdPointOfSale />,
+    roles: ["owner"],
+  },
+  {
     name: "Pengeluaran",
     path: "/finance/expense",
     icon: <MdMoneyOff />,
@@ -104,7 +113,13 @@ const menus = [
     name: "Purchasing",
     path: "/purchasing",
     icon: <MdShoppingCart />,
-    roles: ["owner"],
+    roles: ["owner", "baker"],
+  },
+  {
+    name: "Maintenance",
+    path: "/maintenance",
+    icon: <MdBuild />,
+    roles: ["owner", "baker"],
   },
   {
     name: "Settings",

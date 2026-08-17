@@ -1,20 +1,42 @@
-export function calculateRecipeCost(ingredients = []) {
-  const totalCost = ingredients.reduce((total, item) => {
-    return total + (item.jumlah * item.hargaPerSatuan);
-  }, 0);
+export function calculateRecipeCost(items = []) {
+  const totalCost = items.reduce(
+    (total, item) => {
+      const jumlah = Number(
+        item.jumlah || 0
+      );
 
-  return Number(totalCost.toFixed(2));
+      const hargaPerSatuan = Number(
+        item.hargaPerSatuan || 0
+      );
+
+      return (
+        total +
+        jumlah * hargaPerSatuan
+      );
+    },
+    0
+  );
+
+  return Number(
+    totalCost.toFixed(2)
+  );
 }
 
 export function calculateCostPerYield(
   totalCost,
-  yieldQty,
+  yieldQty
 ) {
-  if (!yieldQty || yieldQty <= 0) {
+  if (
+    !yieldQty ||
+    Number(yieldQty) <= 0
+  ) {
     return 0;
   }
 
   return Number(
-    (totalCost / yieldQty).toFixed(2)
+    (
+      Number(totalCost || 0) /
+      Number(yieldQty)
+    ).toFixed(2)
   );
 }

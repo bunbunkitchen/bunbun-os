@@ -12,12 +12,14 @@ import LoadingState from "../../components/ui/LoadingState";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/modal/Modal";
 import StockAdditionForm from "../../components/forms/StockAdditionForm";
+import StockAdjustmentForm from "../../components/forms/StockAdjustmentForm";
 import { useToast } from "../../context/ToastContext";
 import { useAuth } from "../../context/AuthContext";
 
 import {
   getAllInventoryTransactions,
   createNonPurchaseStockAddition,
+  createInventoryAdjustment,
 } from "../../services/inventoryService";
 
 function convertToBaseUnit(jumlah, satuan) {
@@ -115,6 +117,8 @@ export default function Inventory() {
 
   const [additionOpen, setAdditionOpen] = useState(false);
   const [savingAddition, setSavingAddition] = useState(false);
+  const [adjustmentOpen, setAdjustmentOpen] = useState(false);
+  const [savingAdjustment, setSavingAdjustment] = useState(false);
 
   async function loadInventory() {
     try {
@@ -146,6 +150,22 @@ export default function Inventory() {
       throw error;
     } finally {
       setSavingAddition(false);
+    }
+  }
+
+  async function handleStockAdjustment(values) {
+    if (savingAdjustment) return;
+    setSavingAdjustment(true);
+    try {
+      await createInventoryAdjustment(values);
+      await loadInventory();
+      setAdjustmentOpen(false);
+      toast.success("Stock adjustment berhasil disimpan.");
+    } catch (error) {
+      toast.error(error.message || "Stock adjustment gagal.");
+      throw error;
+    } finally {
+      setSavingAdjustment(false);
     }
   }
 
@@ -312,8 +332,25 @@ export default function Inventory() {
           subtitle="Pantau stok dan pergerakan item Bunbun Kitchen"
         />
         {role === "owner" && (
-          <Button onClick={() => setAdditionOpen(true)}>+ Penambahan Stok</Button>
-        )}
+  <div className="flex flex-wrap gap-2">
+    <Button
+      onClick={() =>
+        setAdditionOpen(true)
+      }
+    >
+      + Penambahan Stok
+    </Button>
+
+    <Button
+      onClick={() =>
+        setAdjustmentOpen(true)
+      }
+      className="bg-gray-700 hover:bg-gray-800"
+    >
+      ± Stock Adjustment
+    </Button>
+  </div>
+)}
       </div>
 
       {pageError && (
@@ -368,6 +405,23 @@ export default function Inventory() {
           saving={savingAddition}
         />
       </Modal>
+
+      <Modal
+  open={adjustmentOpen}
+  onClose={() =>
+    !savingAdjustment &&
+    setAdjustmentOpen(false)
+  }
+>
+  <StockAdjustmentForm
+    onSave={handleStockAdjustment}
+    onCancel={() =>
+      setAdjustmentOpen(false)
+    }
+    saving={savingAdjustment}
+  />
+</Modal>
+
     </div>
   );
 }

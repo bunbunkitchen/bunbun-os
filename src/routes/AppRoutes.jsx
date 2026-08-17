@@ -22,8 +22,10 @@ import ProductionBatches from "../pages/production/ProductionBatches";
 import Inventory from "../pages/inventory/Inventory";
 import ProductStock from "../pages/inventory/ProductStock";
 import Purchasing from "../pages/purchasing/Purchasing";
+import Maintenance from "../pages/maintenance/Maintenance";
 import Income from "../pages/finance/Income";
 import Expense from "../pages/finance/Expense";
+import Sales from "../pages/sales/Sales";
 import Reports from "../pages/reports/Reports";
 import Settings from "../pages/settings/Settings";
 import GoLiveChecklist from "../pages/settings/GoLiveChecklist";
@@ -203,12 +205,23 @@ export default function AppRoutes() {
             path="purchasing"
             element={
               <RoleRoute
-                allowedRoles={["owner"]}
+                allowedRoles={["owner", "baker"]}
               >
                 <Purchasing />
               </RoleRoute>
             }
           />
+
+          <Route
+            path="maintenance"
+            element={
+              <RoleRoute
+                allowedRoles={["owner", "baker"]}
+              >
+                <Maintenance />
+              </RoleRoute>
+          }
+        />
 
           <Route
             path="finance/income"
@@ -217,6 +230,17 @@ export default function AppRoutes() {
                 allowedRoles={["owner"]}
               >
                 <Income />
+              </RoleRoute>
+            }
+          />
+
+          <Route
+            path="sales"
+            element={
+              <RoleRoute
+                allowedRoles={["owner"]}
+              >
+                <Sales />
               </RoleRoute>
             }
           />
