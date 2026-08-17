@@ -11,7 +11,6 @@ import {
   MdInventory,
   MdAcUnit,
   MdShoppingCart,
-  MdCleaningServices,
   MdSettings,
   MdViewKanban,
   MdAttachMoney,
@@ -148,24 +147,48 @@ export default function Sidebar({
           type="button"
           aria-label="Tutup menu"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          className="
+            fixed
+            inset-0
+            z-40
+            bg-[#3F4335]/40
+            lg:hidden
+          "
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-white shadow-xl transition-transform duration-200 lg:translate-x-0 lg:shadow-none ${
-          open
-            ? "translate-x-0"
-            : "-translate-x-full"
-        }`}
+        className={`
+          fixed
+          inset-y-0
+          left-0
+          z-50
+          flex
+          w-64
+          flex-col
+          border-r
+          border-[#D9D8D0]
+          bg-white
+          shadow-xl
+          transition-transform
+          duration-200
+          lg:translate-x-0
+          lg:shadow-none
+          ${
+            open
+              ? "translate-x-0"
+              : "-translate-x-full"
+          }
+        `}
       >
-        <div className="flex items-start justify-between border-b px-6 py-5">
+        {/* BRAND HEADER */}
+        <div className="flex items-start justify-between border-b border-[#D9D8D0] px-6 py-5">
           <div>
-            <h1 className="text-2xl font-bold text-amber-700">
+            <h1 className="text-2xl font-bold text-[#595E48]">
               Bunbun OS
             </h1>
 
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-[#777A6D]">
               Bunbun Kitchen
             </p>
           </div>
@@ -174,12 +197,26 @@ export default function Sidebar({
             type="button"
             onClick={onClose}
             aria-label="Tutup menu"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-2xl text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 lg:hidden"
+            className="
+              flex
+              h-9
+              w-9
+              items-center
+              justify-center
+              rounded-lg
+              text-2xl
+              text-[#777A6D]
+              transition
+              hover:bg-[#F1F3ED]
+              hover:text-[#595E48]
+              lg:hidden
+            "
           >
             <MdClose />
           </button>
         </div>
 
+        {/* NAVIGATION */}
         <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
           {visibleMenus.map((menu) => (
             <NavLink
@@ -188,11 +225,30 @@ export default function Sidebar({
               end={menu.path === "/"}
               onClick={onClose}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition ${
-                  isActive
-                    ? "bg-amber-700 text-white shadow-sm"
-                    : "text-gray-700 hover:bg-amber-50 hover:text-amber-800"
-                }`
+                `
+                  flex
+                  items-center
+                  gap-3
+                  rounded-lg
+                  px-4
+                  py-3
+                  text-sm
+                  font-medium
+                  transition
+                  ${
+                    isActive
+                      ? `
+                        bg-[#595E48]
+                        text-white
+                        shadow-sm
+                      `
+                      : `
+                        text-[#3F4335]
+                        hover:bg-[#F1F3ED]
+                        hover:text-[#595E48]
+                      `
+                  }
+                `
               }
             >
               <span className="text-xl">
@@ -204,13 +260,14 @@ export default function Sidebar({
           ))}
         </nav>
 
-        <div className="border-t px-5 py-4">
-          <p className="truncate text-sm font-semibold text-gray-800">
+        {/* USER FOOTER */}
+        <div className="border-t border-[#D9D8D0] px-5 py-4">
+          <p className="truncate text-sm font-semibold text-[#3F4335]">
             {profile?.full_name ||
               "Pengguna Bunbun OS"}
           </p>
 
-          <p className="mt-1 text-xs capitalize text-gray-500">
+          <p className="mt-1 text-xs capitalize text-[#777A6D]">
             {role || "user"}
           </p>
         </div>

@@ -66,43 +66,49 @@ export default function Header() {
   }
 
   return (
-    <header className="border-b bg-white px-8 py-5">
+    <header className="border-b border-[#D9D8D0] bg-white px-8 py-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-2xl font-bold text-[#3F4335]">
             Selamat Datang 👋
           </h2>
 
-          <p className="mt-1 text-gray-500">
+          <p className="mt-1 text-[#777A6D]">
             Bunbun Kitchen Operational System
           </p>
         </div>
 
         <div className="flex flex-col gap-3 sm:items-end">
           <div className="text-left sm:text-right">
-            <p className="font-semibold text-gray-900">
+            <p className="font-semibold text-[#3F4335]">
               {displayName}
             </p>
 
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-[#777A6D]">
               {formatRole(role)}
             </p>
           </div>
 
           <Button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="bg-red-600 hover:bg-red-700"
-          >
-            {loggingOut
-              ? "Keluar..."
-              : "Logout"}
-          </Button>
+  onClick={handleLogout}
+  disabled={loggingOut}
+  className="
+    !bg-[#595E48]
+    !text-white
+    hover:!bg-[#4D523E]
+    focus:!ring-2
+    focus:!ring-[#C7CDBF]
+  "
+>
+  {loggingOut
+    ? "Keluar..."
+    : "Logout"}
+</Button>
         </div>
       </div>
 
       {logoutError && (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="mt-4 rounded-lg border border-[#EECFCA] bg-[#ECE1DD] p-3 text-sm text-[#C97B78]">
           {logoutError}
         </div>
       )}

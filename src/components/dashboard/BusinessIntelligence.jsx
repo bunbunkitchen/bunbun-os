@@ -3,14 +3,14 @@ import Currency from "../ui/Currency";
 
 function RejectBadge({ rate = 0 }) {
   let color =
-    "text-green-700 bg-green-100";
+    "text-[#595E48] bg-[#C7CDBF]";
 
   if (rate >= 5) {
     color =
-      "text-red-700 bg-red-100";
+      "text-[#B56F69] bg-[#EECFCA]";
   } else if (rate >= 2) {
     color =
-      "text-amber-700 bg-amber-100";
+      "text-[#8F6A58] bg-[#C7A491]";
   }
 
   return (
@@ -32,13 +32,13 @@ export default function BusinessIntelligence({
 
   return (
     <div>
-      <h2 className="mb-5 text-2xl font-bold">
+      <h2 className="mb-5 text-2xl font-bold text-[#3F4335]">
         Business Intelligence
       </h2>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <h3 className="mb-5 text-lg font-semibold">
+          <h3 className="mb-5 text-lg font-semibold text-[#3F4335]">
             {showFinance
               ? "Insight Bulan Ini"
               : "Insight Produksi"}
@@ -48,9 +48,11 @@ export default function BusinessIntelligence({
             {showFinance && (
               <>
                 <div className="flex justify-between">
-                  <span>Income</span>
+                  <span className="text-[#777A6D]">
+                    Income
+                  </span>
 
-                  <strong>
+                  <strong className="text-[#595E48]">
                     <Currency
                       value={
                         data.monthlyIncome
@@ -60,9 +62,11 @@ export default function BusinessIntelligence({
                 </div>
 
                 <div className="flex justify-between">
-                  <span>Expense</span>
+                  <span className="text-[#777A6D]">
+                    Expense
+                  </span>
 
-                  <strong>
+                  <strong className="text-[#8F6A58]">
                     <Currency
                       value={
                         data.monthlyExpense
@@ -72,9 +76,11 @@ export default function BusinessIntelligence({
                 </div>
 
                 <div className="flex justify-between">
-                  <span>Profit</span>
+                  <span className="text-[#777A6D]">
+                    Profit
+                  </span>
 
-                  <strong className="text-green-700">
+                  <strong className="text-[#595E48]">
                     <Currency
                       value={
                         data.monthlyProfit
@@ -86,11 +92,11 @@ export default function BusinessIntelligence({
             )}
 
             <div className="flex justify-between">
-              <span>
+              <span className="text-[#777A6D]">
                 Produksi Bulan Ini
               </span>
 
-              <strong>
+              <strong className="text-[#3F4335]">
                 {Number(
                   data.monthlyFinished || 0
                 ).toLocaleString(
@@ -101,7 +107,7 @@ export default function BusinessIntelligence({
             </div>
 
             <div className="flex items-center justify-between">
-              <span>
+              <span className="text-[#777A6D]">
                 Reject Rate Hari Ini
               </span>
 
@@ -113,11 +119,11 @@ export default function BusinessIntelligence({
             </div>
 
             <div className="flex justify-between">
-              <span>
+              <span className="text-[#777A6D]">
                 Stok Rendah
               </span>
 
-              <strong>
+              <strong className="text-[#3F4335]">
                 {data.lowStockCount || 0}
               </strong>
             </div>
@@ -125,14 +131,14 @@ export default function BusinessIntelligence({
         </Card>
 
         <Card>
-          <h3 className="mb-5 text-lg font-semibold">
+          <h3 className="mb-5 text-lg font-semibold text-[#3F4335]">
             Top Produk Bulan Ini
           </h3>
 
           {!data.productionByRecipe ||
           data.productionByRecipe.length ===
             0 ? (
-            <p className="text-gray-500">
+            <p className="text-[#777A6D]">
               Belum ada produksi.
             </p>
           ) : (
@@ -155,18 +161,18 @@ export default function BusinessIntelligence({
                       key={recipe.kode}
                     >
                       <div className="flex justify-between text-sm">
-                        <span>
+                        <span className="text-[#3F4335]">
                           {recipe.nama}
                         </span>
 
-                        <strong>
+                        <strong className="text-[#595E48]">
                           {recipe.selesai}
                         </strong>
                       </div>
 
-                      <div className="mt-1 h-2 rounded bg-gray-200">
+                      <div className="mt-1 h-2 rounded-full bg-[#ECE1DD]">
                         <div
-                          className="h-2 rounded bg-amber-500"
+                          className="h-2 rounded-full bg-[#C7A491]"
                           style={{
                             width: `${percent}%`,
                           }}
@@ -182,14 +188,14 @@ export default function BusinessIntelligence({
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
-          <h3 className="mb-4 text-lg font-semibold">
+          <h3 className="mb-4 text-lg font-semibold text-[#3F4335]">
             Batch Sedang Berjalan
           </h3>
 
           {!data.activeBatchItems ||
           data.activeBatchItems.length ===
             0 ? (
-            <p className="text-green-700">
+            <p className="text-[#595E48]">
               Tidak ada batch aktif.
             </p>
           ) : (
@@ -198,22 +204,22 @@ export default function BusinessIntelligence({
                 (batch) => (
                   <div
                     key={batch.id}
-                    className="rounded-lg border p-3"
+                    className="rounded-lg border border-[#D9D8D0] bg-[#F5F3EE] p-3"
                   >
-                    <div className="font-semibold">
+                    <div className="font-semibold text-[#3F4335]">
                       {batch.kode}
                     </div>
 
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-[#777A6D]">
                       {batch.recipeNama}
                     </div>
 
                     <div className="mt-2 flex justify-between text-sm">
-                      <span>
+                      <span className="text-[#777A6D]">
                         {batch.status}
                       </span>
 
-                      <span>
+                      <span className="font-medium text-[#595E48]">
                         {batch.selesai} /{" "}
                         {batch.target}
                       </span>
@@ -226,13 +232,13 @@ export default function BusinessIntelligence({
         </Card>
 
         <Card>
-          <h3 className="mb-4 text-lg font-semibold">
+          <h3 className="mb-4 text-lg font-semibold text-[#3F4335]">
             Bahan Hampir Habis
           </h3>
 
           {data.lowStockCount ===
           0 ? (
-            <p className="text-green-700">
+            <p className="text-[#595E48]">
               Semua stok aman.
             </p>
           ) : (
@@ -241,14 +247,14 @@ export default function BusinessIntelligence({
                 (item) => (
                   <div
                     key={item.id}
-                    className="flex justify-between rounded-lg bg-red-50 p-3"
+                    className="flex justify-between rounded-lg border border-[#EECFCA] bg-[#FAEFED] p-3"
                   >
                     <div>
-                      <div className="font-semibold">
+                      <div className="font-semibold text-[#3F4335]">
                         {item.nama}
                       </div>
 
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-[#777A6D]">
                         Minimum{" "}
                         {
                           item.minimumStok
@@ -257,7 +263,7 @@ export default function BusinessIntelligence({
                       </div>
                     </div>
 
-                    <strong className="text-red-700">
+                    <strong className="text-[#B56F69]">
                       {item.stok}{" "}
                       {item.satuan}
                     </strong>

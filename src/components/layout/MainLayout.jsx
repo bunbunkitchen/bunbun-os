@@ -18,20 +18,33 @@ export default function MainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F6F3]">
+    <div className="min-h-screen bg-[#ECE1DD]">
       <Sidebar
         open={sidebarOpen}
         onClose={closeSidebar}
       />
 
       <div className="min-h-screen lg:pl-64">
-        <div className="sticky top-0 z-30 border-b bg-white">
+        <div className="sticky top-0 z-30 border-b border-[#D9D8D0] bg-white">
           <div className="flex items-center">
             <button
               type="button"
               onClick={openSidebar}
               aria-label="Buka menu"
-              className="ml-4 flex h-10 w-10 items-center justify-center rounded-lg text-2xl text-gray-700 transition hover:bg-amber-50 lg:hidden"
+              className="
+                ml-4
+                flex
+                h-10
+                w-10
+                items-center
+                justify-center
+                rounded-lg
+                text-2xl
+                text-[#595E48]
+                transition
+                hover:bg-[#F1F3ED]
+                lg:hidden
+              "
             >
               <MdMenu />
             </button>

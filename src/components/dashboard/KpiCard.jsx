@@ -7,29 +7,33 @@ export default function KpiCard({
 }) {
   const toneClasses = {
     green: {
-      card: "border-green-200 bg-green-50",
-      icon: "bg-green-100 text-green-700",
-      value: "text-green-700",
+      card: "border-[#C7CDBF] bg-[#F1F3ED]",
+      icon: "bg-[#C7CDBF] text-[#595E48]",
+      value: "text-[#595E48]",
     },
+
     red: {
-      card: "border-red-200 bg-red-50",
-      icon: "bg-red-100 text-red-700",
-      value: "text-red-700",
+      card: "border-[#EECFCA] bg-[#FAEFED]",
+      icon: "bg-[#EECFCA] text-[#B56F69]",
+      value: "text-[#B56F69]",
     },
+
     blue: {
-      card: "border-blue-200 bg-blue-50",
-      icon: "bg-blue-100 text-blue-700",
-      value: "text-blue-700",
+      card: "border-[#C7CDBF] bg-[#F1F3ED]",
+      icon: "bg-[#919682] text-white",
+      value: "text-[#595E48]",
     },
+
     amber: {
-      card: "border-amber-200 bg-amber-50",
-      icon: "bg-amber-100 text-amber-700",
-      value: "text-amber-700",
+      card: "border-[#C7A491] bg-[#F7F0EB]",
+      icon: "bg-[#C7A491] text-white",
+      value: "text-[#8F6A58]",
     },
+
     gray: {
-      card: "border-gray-200 bg-white",
-      icon: "bg-gray-100 text-gray-700",
-      value: "text-gray-900",
+      card: "border-[#D9D8D0] bg-white",
+      icon: "bg-[#ECE1DD] text-[#595E48]",
+      value: "text-[#3F4335]",
     },
   };
 
@@ -38,22 +42,37 @@ export default function KpiCard({
 
   return (
     <div
-      className={`rounded-2xl border p-5 shadow-sm ${selectedTone.card}`}
+      className={`
+        rounded-2xl
+        border
+        p-5
+        shadow-sm
+        transition-all
+        duration-200
+        hover:-translate-y-0.5
+        hover:shadow-md
+        ${selectedTone.card}
+      `}
     >
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-gray-600">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-[#777A6D]">
             {title}
           </p>
 
           <p
-            className={`mt-2 text-2xl font-bold ${selectedTone.value}`}
+            className={`
+              mt-2
+              text-2xl
+              font-bold
+              ${selectedTone.value}
+            `}
           >
             {value}
           </p>
 
           {subtitle && (
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-xs text-[#777A6D]">
               {subtitle}
             </p>
           )}
@@ -61,7 +80,17 @@ export default function KpiCard({
 
         {icon && (
           <div
-            className={`flex h-11 w-11 items-center justify-center rounded-xl text-2xl ${selectedTone.icon}`}
+            className={`
+              flex
+              h-11
+              w-11
+              shrink-0
+              items-center
+              justify-center
+              rounded-xl
+              text-2xl
+              ${selectedTone.icon}
+            `}
           >
             {icon}
           </div>
