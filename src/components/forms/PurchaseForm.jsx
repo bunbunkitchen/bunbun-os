@@ -35,7 +35,7 @@ const INITIAL_FORM = {
   isiPerSediaan: "",
   satuanSediaan: "",
 
-  // Maintenance / kompatibilitas data lama
+  // Maintenance / data lama
   jumlah: "",
   satuan: "",
 
@@ -56,9 +56,7 @@ function toBaseQuantity(
   const value = Number(quantity || 0);
   const normalized = normalizeUnit(unit);
 
-  if (
-    normalized === "kg"
-  ) {
+  if (normalized === "kg") {
     return value * 1000;
   }
 
@@ -79,9 +77,7 @@ function fromBaseQuantity(
   const value = Number(quantity || 0);
   const normalized = normalizeUnit(unit);
 
-  if (
-    normalized === "kg"
-  ) {
+  if (normalized === "kg") {
     return value / 1000;
   }
 
@@ -98,7 +94,6 @@ function fromBaseQuantity(
 export default function PurchaseForm({
   initialData = null,
   onSave,
-  onUpdate,
   onCancel,
   saving = false,
 }) {
@@ -127,6 +122,11 @@ export default function PurchaseForm({
   const isEdit =
     Boolean(initialData);
 
+  /*
+   * ============================
+   * LOAD MASTER DATA
+   * ============================
+   */
   useEffect(() => {
     async function loadMasterData() {
       try {
@@ -172,9 +172,21 @@ export default function PurchaseForm({
     void loadMasterData();
   }, []);
 
+  /*
+   * ============================
+   * LOAD DATA SAAT EDIT
+   * ============================
+   */
   useEffect(() => {
     if (!initialData) {
-      setForm(INITIAL_FORM);
+      setForm({
+        ...INITIAL_FORM,
+        tanggal: new Date()
+          .toISOString()
+          .slice(0, 10),
+      });
+
+      setError("");
       return;
     }
 
@@ -183,15 +195,9 @@ export default function PurchaseForm({
       "MAINTENANCE";
 
     /*
-     * Data purchasing lama belum
-     * memiliki informasi sediaan.
-     *
-     * Supaya tetap bisa diedit,
-     * kita perlakukan sebagai:
-     *
-     * jumlah sediaan = jumlah lama
-     * isi sediaan = 1
-     * satuan sediaan = satuan lama
+     * Kompatibilitas dengan
+     * purchasing lama yang belum
+     * punya data sediaan.
      */
     const legacyJumlah =
       initialData.jumlah ?? "";
@@ -231,6 +237,9 @@ export default function PurchaseForm({
             )
           : "",
 
+      /*
+       * BAHAN BAKU
+       */
       jumlahSediaan:
         !isMaintenance &&
         initialData.jumlahSediaan != null
@@ -255,6 +264,9 @@ export default function PurchaseForm({
           ? legacySatuan
           : "",
 
+      /*
+       * MAINTENANCE
+       */
       jumlah:
         isMaintenance
           ? legacyJumlah
@@ -269,8 +281,15 @@ export default function PurchaseForm({
       keterangan:
         initialData.keterangan || "",
     });
+
+    setError("");
   }, [initialData]);
 
+  /*
+   * ============================
+   * SELECTED MASTER
+   * ============================
+   */
   const selectedIngredient =
     useMemo(
       () =>
@@ -304,9 +323,11 @@ export default function PurchaseForm({
     );
 
   /*
-   * Total pembelian:
+   * ============================
+   * TOTAL PEMBELIAN
+   * ============================
    *
-   * Bahan baku:
+   * Ingredient:
    * jumlah sediaan × harga/sediaan
    *
    * Maintenance:
@@ -341,8 +362,9 @@ export default function PurchaseForm({
   ]);
 
   /*
-   * Hitung stok yang benar-benar
-   * masuk inventory.
+   * ============================
+   * STOK MASUK
+   * ============================
    */
   const stockIncoming =
     useMemo(() => {
@@ -380,6 +402,11 @@ export default function PurchaseForm({
       form.satuan,
     ]);
 
+  /*
+   * ============================
+   * UPDATE FIELD
+   * ============================
+   */
   function updateField(
     name,
     value
@@ -390,6 +417,11 @@ export default function PurchaseForm({
     }));
   }
 
+  /*
+   * ============================
+   * CHANGE PURCHASE TYPE
+   * ============================
+   */
   function handlePurchaseTypeChange(
     value
   ) {
@@ -443,6 +475,11 @@ export default function PurchaseForm({
     }));
   }
 
+  /*
+   * ============================
+   * CHANGE ITEM
+   * ============================
+   */
   function handleItemChange(
     value
   ) {
@@ -469,11 +506,11 @@ export default function PurchaseForm({
           "",
 
         /*
-         * Harga MASTER TIDAK
-         * masuk ke Purchasing.
+         * Harga master tidak
+         * digunakan.
          *
-         * Harga ini wajib diisi
-         * sesuai harga aktual.
+         * User memasukkan harga
+         * aktual pembelian.
          */
         hargaSatuan: "",
 
@@ -508,6 +545,23 @@ export default function PurchaseForm({
     }));
   }
 
+  /*
+   * ============================
+   * SUBMIT
+   * ============================
+   *
+   * PENTING:
+   *
+   * PurchaseForm TIDAK lagi
+   * memanggil onUpdate.
+   *
+   * Baik CREATE maupun EDIT
+   * dikirim melalui onSave.
+   *
+   * MasterPage yang menentukan
+   * apakah operasi tersebut
+   * create atau update.
+   */
   async function handleSubmit(
     event
   ) {
@@ -515,6 +569,9 @@ export default function PurchaseForm({
 
     setError("");
 
+    /*
+     * TANGGAL
+     */
     if (!form.tanggal) {
       setError(
         "Tanggal pembelian wajib diisi."
@@ -522,6 +579,9 @@ export default function PurchaseForm({
       return;
     }
 
+    /*
+     * INGREDIENT
+     */
     if (
       form.purchaseType ===
       "INGREDIENT"
@@ -558,6 +618,7 @@ export default function PurchaseForm({
       }
 
       if (
+        !form.satuanSediaan ||
         !form.satuanSediaan.trim()
       ) {
         setError(
@@ -565,8 +626,21 @@ export default function PurchaseForm({
         );
         return;
       }
+
+      if (
+        !form.satuan ||
+        !form.satuan.trim()
+      ) {
+        setError(
+          "Satuan inventory tidak ditemukan."
+        );
+        return;
+      }
     }
 
+    /*
+     * MAINTENANCE
+     */
     if (
       form.purchaseType ===
       "MAINTENANCE"
@@ -591,8 +665,12 @@ export default function PurchaseForm({
       }
     }
 
+    /*
+     * HARGA
+     */
     if (
-      !form.hargaSatuan ||
+      form.hargaSatuan === "" ||
+      form.hargaSatuan === null ||
       Number(form.hargaSatuan) < 0
     ) {
       setError(
@@ -601,6 +679,11 @@ export default function PurchaseForm({
       return;
     }
 
+    /*
+     * ============================
+     * PAYLOAD
+     * ============================
+     */
     const payload = {
       tanggal:
         form.tanggal,
@@ -657,11 +740,7 @@ export default function PurchaseForm({
           : null,
 
       /*
-       * jumlah + satuan adalah
-       * quantity inventory.
-       *
-       * Service akan menghitung
-       * otomatis untuk ingredient.
+       * Maintenance
        */
       jumlah:
         form.purchaseType ===
@@ -682,22 +761,33 @@ export default function PurchaseForm({
     };
 
     try {
-      if (isEdit) {
-        await onUpdate(
-          initialData,
-          payload
-        );
-      } else {
-        await onSave(payload);
-      }
+      /*
+       * SATU JALUR:
+       *
+       * CREATE → MasterPage handleSubmit
+       * EDIT   → MasterPage handleSubmit
+       */
+      await onSave(payload);
     } catch (err) {
+      console.error(
+        "PurchaseForm submit error:",
+        err
+      );
+
       setError(
         err.message ||
           "Pembelian gagal disimpan."
       );
+
+      throw err;
     }
   }
 
+  /*
+   * ============================
+   * LOADING
+   * ============================
+   */
   if (loadingMaster) {
     return (
       <div className="p-6 text-sm text-gray-500">
@@ -706,6 +796,11 @@ export default function PurchaseForm({
     );
   }
 
+  /*
+   * ============================
+   * RENDER
+   * ============================
+   */
   return (
     <form
       onSubmit={handleSubmit}
