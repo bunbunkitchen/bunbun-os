@@ -126,7 +126,6 @@ export default function MasterPage({
 
     return {
       key: "__actions",
-
       title: "Aksi",
 
       render: (item) => (
@@ -135,9 +134,7 @@ export default function MasterPage({
             canEdit && (
               <Button
                 onClick={() =>
-                  handleOpenEdit(
-                    item
-                  )
+                  handleOpenEdit(item)
                 }
                 disabled={
                   saving ||
@@ -145,9 +142,7 @@ export default function MasterPage({
                 }
                 className="!bg-[#E8EDE2] !text-[#5F6F4F] shadow-sm hover:!bg-[#DCE4D3] hover:!text-[#4F5F42]"
               >
-                {
-                  editButtonText
-                }
+                {editButtonText}
               </Button>
             )}
 
@@ -155,9 +150,7 @@ export default function MasterPage({
             canDelete && (
               <Button
                 onClick={() =>
-                  setDeleteItem(
-                    item
-                  )
+                  setDeleteItem(item)
                 }
                 disabled={
                   saving ||
@@ -165,9 +158,7 @@ export default function MasterPage({
                 }
                 className="!bg-[#F3E2DF] !text-[#9A625B] shadow-sm hover:!bg-[#EAD3CF] hover:!text-[#87534D]"
               >
-                {
-                  deleteButtonText
-                }
+                {deleteButtonText}
               </Button>
             )}
         </div>
@@ -239,16 +230,6 @@ export default function MasterPage({
    * ============================
    * FORM SUBMIT
    * ============================
-   *
-   * PurchaseForm mengirim payload
-   * melalui onSave().
-   *
-   * Di sini baru kita tentukan:
-   *
-   * CREATE → onSave(payload)
-   *
-   * EDIT → onUpdate(selectedItem,
-   *                 payload)
    */
   async function handleSubmit(
     item
@@ -329,8 +310,7 @@ export default function MasterPage({
       toast.error(message);
 
       /*
-       * Jangan throw lagi ke
-       * PurchaseForm.
+       * Jangan throw error lagi.
        *
        * MasterPage sudah menangani
        * error di sini.
@@ -342,7 +322,7 @@ export default function MasterPage({
 
   /*
    * ============================
-   * DELETE
+   * DELETE CONFIRMATION
    * ============================
    */
   async function handleConfirmDelete() {
@@ -421,9 +401,7 @@ export default function MasterPage({
 
           {sectionDescription && (
             <p className="mt-1 text-sm text-gray-500">
-              {
-                sectionDescription
-              }
+              {sectionDescription}
             </p>
           )}
         </div>
@@ -435,12 +413,9 @@ export default function MasterPage({
                 searchPlaceholder
               }
               value={search}
-              onChange={(
-                event
-              ) =>
+              onChange={(event) =>
                 setSearch(
-                  event.target
-                    .value
+                  event.target.value
                 )
               }
               disabled={
@@ -461,9 +436,7 @@ export default function MasterPage({
                   deleting
                 }
               >
-                {
-                  addButtonText
-                }
+                {addButtonText}
               </Button>
             )}
         </div>
@@ -481,11 +454,9 @@ export default function MasterPage({
         />
       </Card>
 
-      /*
-       * ==========================
-       * FORM MODAL
-       * ==========================
-       */
+      {/* ==========================
+          FORM MODAL
+          ========================== */}
       {FormComponent && (
         <Modal
           open={Boolean(
@@ -497,9 +468,7 @@ export default function MasterPage({
         >
           {formError && (
             <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {
-                formError
-              }
+              {formError}
             </div>
           )}
 
@@ -527,11 +496,9 @@ export default function MasterPage({
         </Modal>
       )}
 
-      /*
-       * ==========================
-       * DELETE CONFIRMATION
-       * ==========================
-       */
+      {/* ==========================
+          DELETE CONFIRMATION
+          ========================== */}
       <ConfirmDialog
         open={Boolean(
           deleteItem
