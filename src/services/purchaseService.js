@@ -154,6 +154,9 @@ function mapPurchase(row) {
     /*
      * jumlah = quantity inventory
      * dalam satuan master bahan.
+     *
+     * Untuk maintenance:
+     * jumlah = jumlah pembelian maintenance.
      */
     jumlah:
       Number(row.jumlah || 0),
@@ -336,7 +339,22 @@ export async function createPurchase(
    * ============================
    */
   else {
-    const jumlah =
+    /*
+     * PENTING:
+     *
+     * Jangan gunakan:
+     *
+     * const jumlah = ...
+     *
+     * karena akan membuat variable
+     * baru di dalam block else.
+     *
+     * Kita harus mengisi variable
+     * `jumlah` yang sudah dideklarasikan
+     * di atas agar bisa digunakan
+     * oleh payload Supabase.
+     */
+    jumlah =
       Number(
         purchase.jumlah
       );
@@ -345,6 +363,12 @@ export async function createPurchase(
       Number(
         purchase.hargaSatuan
       );
+
+    if (jumlah <= 0) {
+      throw new Error(
+        "Jumlah pembelian harus lebih dari 0."
+      );
+    }
 
     total =
       jumlah *
@@ -369,6 +393,16 @@ export async function createPurchase(
         ? purchase.maintenanceItemId
         : null,
 
+    /*
+     * Untuk:
+     *
+     * INGREDIENT:
+     * jumlah inventory hasil
+     * konversi kemasan.
+     *
+     * MAINTENANCE:
+     * jumlah langsung dari form.
+     */
     jumlah,
 
     satuan:
