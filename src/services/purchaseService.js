@@ -10,6 +10,12 @@ import {
 
 const TABLE_NAME = "purchases";
 
+/*
+ * ============================
+ * UNIT HELPERS
+ * ============================
+ */
+
 function normalizeUnit(unit) {
   return String(unit || "")
     .trim()
@@ -61,30 +67,52 @@ function fromBaseQuantity(
 }
 
 /*
- * Mengubah jumlah sediaan menjadi
- * jumlah inventory dalam satuan master.
+ * ============================
+ * CALCULATE INVENTORY QUANTITY
+ * ============================
  *
  * Contoh:
  *
- * 4 × 250 gram
- * master = kg
+ * 4 sediaan
+ * × 250 gram / sediaan
+ * = 1000 gram
  *
- * 4 × 250 = 1000 gram
- * 1000 gram = 1 kg
+ * Jika satuan inventory = kg:
+ *
+ * 1000 gram
+ * = 1 kg
+ *
+ * Fungsi ini digunakan untuk:
+ * - Bahan Baku
+ * - Maintenance
+ *
+ * Maintenance tidak membuat
+ * inventory transaction, tetapi
+ * quantity aktual tetap disimpan
+ * pada record purchasing.
  */
+
 function calculateInventoryQuantity({
   jumlahSediaan,
   isiPerSediaan,
   satuanSediaan,
   satuanInventory,
 }) {
-  const totalSediaan =
+  const totalIsi =
     Number(jumlahSediaan || 0) *
     Number(isiPerSediaan || 0);
 
+  if (
+    totalIsi <= 0 ||
+    !satuanSediaan ||
+    !satuanInventory
+  ) {
+    return 0;
+  }
+
   const baseQuantity =
     toBaseQuantity(
-      totalSediaan,
+      totalIsi,
       satuanSediaan
     );
 
@@ -93,6 +121,12 @@ function calculateInventoryQuantity({
     satuanInventory
   );
 }
+
+/*
+ * ============================
+ * MAP PURCHASE
+ * ============================
+ */
 
 function mapPurchase(row) {
   const isMaintenance =
@@ -117,6 +151,10 @@ function mapPurchase(row) {
         ? "MAINTENANCE"
         : "INGREDIENT",
 
+    /*
+     * BAHAN BAKU
+     */
+
     ingredientId:
       row.ingredient_id,
 
@@ -126,16 +164,24 @@ function mapPurchase(row) {
     ingredientNama:
       row.ingredients?.nama ?? "",
 
+    /*
+     * MAINTENANCE
+     */
+
     maintenanceItemId:
       row.maintenance_item_id,
 
     maintenanceItemKode:
-      row.maintenance_items?.kode ??
-      "",
+      row.maintenance_items
+        ?.kode ?? "",
 
     maintenanceItemNama:
-      row.maintenance_items?.nama ??
-      "",
+      row.maintenance_items
+        ?.nama ?? "",
+
+    /*
+     * GENERIC ITEM
+     */
 
     itemKode:
       isMaintenance
@@ -152,21 +198,34 @@ function mapPurchase(row) {
             ?.nama ?? "",
 
     /*
-     * jumlah = quantity inventory
-     * dalam satuan master bahan.
+     * ============================
+     * QUANTITY
+     * ============================
+     *
+     * jumlah = quantity aktual
+     * dalam satuan inventory/master.
+     *
+     * Untuk bahan baku:
+     * hasil konversi sediaan.
      *
      * Untuk maintenance:
-     * jumlah = jumlah pembelian maintenance.
+     * hasil konversi sediaan juga.
      */
+
     jumlah:
-      Number(row.jumlah || 0),
+      Number(
+        row.jumlah || 0
+      ),
 
     satuan:
       row.satuan,
 
     /*
-     * Informasi kemasan aktual.
+     * ============================
+     * SEDIAAN
+     * ============================
      */
+
     jumlahSediaan:
       row.jumlah_sediaan == null
         ? null
@@ -185,22 +244,33 @@ function mapPurchase(row) {
       row.satuan_sediaan ?? "",
 
     /*
-     * Harga aktual pembelian.
-     * TIDAK berhubungan dengan
-     * harga Master Bahan Baku.
+     * ============================
+     * HARGA
+     * ============================
+     *
+     * hargaSatuan = harga per sediaan.
      */
+
     hargaSatuan:
       Number(
         row.harga_satuan || 0
       ),
 
     total:
-      Number(row.total || 0),
+      Number(
+        row.total || 0
+      ),
 
     keterangan:
       row.keterangan ?? "",
   };
 }
+
+/*
+ * ============================
+ * CURRENT USER
+ * ============================
+ */
 
 async function getCurrentUser() {
   const {
@@ -222,8 +292,17 @@ async function getCurrentUser() {
   return user;
 }
 
+/*
+ * ============================
+ * GET ALL PURCHASES
+ * ============================
+ */
+
 export async function getAllPurchases() {
-  const { data, error } =
+  const {
+    data,
+    error,
+  } =
     await supabase
       .from(TABLE_NAME)
       .select(`
@@ -260,6 +339,12 @@ export async function getAllPurchases() {
   ).map(mapPurchase);
 }
 
+/*
+ * ============================
+ * CREATE PURCHASE
+ * ============================
+ */
+
 export async function createPurchase(
   purchase
 ) {
@@ -270,110 +355,119 @@ export async function createPurchase(
     purchase.purchaseType ===
     "MAINTENANCE";
 
-  let jumlah;
-  let total;
+  const jumlahSediaan =
+    Number(
+      purchase.jumlahSediaan || 0
+    );
+
+  const isiPerSediaan =
+    Number(
+      purchase.isiPerSediaan || 0
+    );
+
+  const hargaSatuan =
+    Number(
+      purchase.hargaSatuan || 0
+    );
 
   /*
    * ============================
-   * BAHAN BAKU
+   * VALIDASI UMUM
    * ============================
    */
-  if (!isMaintenance) {
-    const jumlahSediaan =
-      Number(
-        purchase.jumlahSediaan
-      );
 
-    const isiPerSediaan =
-      Number(
-        purchase.isiPerSediaan
-      );
+  if (
+    jumlahSediaan <= 0
+  ) {
+    throw new Error(
+      "Jumlah sediaan harus lebih dari 0."
+    );
+  }
 
-    const hargaSatuan =
-      Number(
-        purchase.hargaSatuan
-      );
+  if (
+    isiPerSediaan <= 0
+  ) {
+    throw new Error(
+      "Isi per sediaan harus lebih dari 0."
+    );
+  }
 
-    if (
-      jumlahSediaan <= 0
-    ) {
-      throw new Error(
-        "Jumlah sediaan harus lebih dari 0."
-      );
-    }
+  if (
+    !purchase.satuanSediaan
+  ) {
+    throw new Error(
+      "Satuan isi wajib diisi."
+    );
+  }
 
-    if (
-      isiPerSediaan <= 0
-    ) {
-      throw new Error(
-        "Isi per sediaan harus lebih dari 0."
-      );
-    }
+  if (
+    !purchase.satuan
+  ) {
+    throw new Error(
+      "Satuan inventory wajib diisi."
+    );
+  }
 
-    if (
-      !purchase.satuanSediaan
-    ) {
-      throw new Error(
-        "Satuan sediaan wajib diisi."
-      );
-    }
-
-    jumlah =
-      calculateInventoryQuantity({
-        jumlahSediaan,
-        isiPerSediaan,
-        satuanSediaan:
-          purchase.satuanSediaan,
-        satuanInventory:
-          purchase.satuan,
-      });
-
-    total =
-      jumlahSediaan *
-      hargaSatuan;
+  if (
+    hargaSatuan < 0
+  ) {
+    throw new Error(
+      "Harga per sediaan tidak valid."
+    );
   }
 
   /*
    * ============================
-   * MAINTENANCE
+   * JUMLAH AKTUAL
+   * ============================
+   *
+   * Contoh:
+   *
+   * Maintenance:
+   *
+   * 4 box
+   * isi 10 pcs
+   *
+   * = 40 pcs
+   */
+
+  const jumlah =
+    calculateInventoryQuantity({
+      jumlahSediaan,
+      isiPerSediaan,
+      satuanSediaan:
+        purchase.satuanSediaan,
+      satuanInventory:
+        purchase.satuan,
+    });
+
+  if (
+    jumlah <= 0
+  ) {
+    throw new Error(
+      "Jumlah quantity yang dihitung tidak valid."
+    );
+  }
+
+  /*
+   * ============================
+   * TOTAL PEMBELIAN
+   * ============================
+   *
+   * Harga per sediaan
+   * ×
+   * jumlah sediaan
+   */
+
+  const total =
+    jumlahSediaan *
+    hargaSatuan;
+
+  /*
+   * ============================
+   * PAYLOAD
    * ============================
    */
-  else {
-    /*
-     * PENTING:
-     *
-     * Jangan gunakan:
-     *
-     * const jumlah = ...
-     *
-     * karena akan membuat variable
-     * baru di dalam block else.
-     *
-     * Kita harus mengisi variable
-     * `jumlah` yang sudah dideklarasikan
-     * di atas agar bisa digunakan
-     * oleh payload Supabase.
-     */
-    jumlah =
-      Number(
-        purchase.jumlah
-      );
-
-    const hargaSatuan =
-      Number(
-        purchase.hargaSatuan
-      );
-
-    if (jumlah <= 0) {
-      throw new Error(
-        "Jumlah pembelian harus lebih dari 0."
-      );
-    }
-
-    total =
-      jumlah *
-      hargaSatuan;
-  }
 
   const payload = {
     tanggal:
@@ -394,45 +488,42 @@ export async function createPurchase(
         : null,
 
     /*
-     * Untuk:
-     *
-     * INGREDIENT:
-     * jumlah inventory hasil
-     * konversi kemasan.
-     *
-     * MAINTENANCE:
-     * jumlah langsung dari form.
+     * Quantity aktual.
      */
+
     jumlah,
 
     satuan:
       purchase.satuan,
 
+    /*
+     * Harga per sediaan.
+     */
+
     harga_satuan:
-      Number(
-        purchase.hargaSatuan
-      ),
+      hargaSatuan,
+
+    /*
+     * Total pembayaran.
+     */
 
     total,
 
+    /*
+     * Detail sediaan.
+     *
+     * SEKARANG BERLAKU UNTUK
+     * BAHAN BAKU DAN MAINTENANCE.
+     */
+
     jumlah_sediaan:
-      isMaintenance
-        ? null
-        : Number(
-            purchase.jumlahSediaan
-          ),
+      jumlahSediaan,
 
     isi_per_sediaan:
-      isMaintenance
-        ? null
-        : Number(
-            purchase.isiPerSediaan
-          ),
+      isiPerSediaan,
 
     satuan_sediaan:
-      isMaintenance
-        ? null
-        : purchase.satuanSediaan,
+      purchase.satuanSediaan,
 
     keterangan:
       purchase.keterangan ||
@@ -445,7 +536,16 @@ export async function createPurchase(
       user.id,
   };
 
-  const { data, error } =
+  /*
+   * ============================
+   * INSERT PURCHASE
+   * ============================
+   */
+
+  const {
+    data,
+    error,
+  } =
     await supabase
       .from(TABLE_NAME)
       .insert(payload)
@@ -473,9 +573,17 @@ export async function createPurchase(
     mapPurchase(data);
 
   /*
-   * Hanya bahan baku yang
-   * masuk inventory.
+   * ============================
+   * INVENTORY
+   * ============================
+   *
+   * HANYA bahan baku yang
+   * masuk inventory bahan baku.
+   *
+   * Maintenance TIDAK masuk
+   * inventory bahan baku.
    */
+
   if (
     savedPurchase.purchaseType ===
     "INGREDIENT"
@@ -490,7 +598,8 @@ export async function createPurchase(
       ingredientId:
         savedPurchase.ingredientId,
 
-      recipeId: null,
+      recipeId:
+        null,
 
       productionBatchId:
         null,
@@ -514,10 +623,17 @@ export async function createPurchase(
   }
 
   /*
-   * Purchasing tetap menjadi
-   * expense berdasarkan harga
-   * aktual pembelian.
+   * ============================
+   * EXPENSE
+   * ============================
+   *
+   * Bahan Baku:
+   * kategori Bahan Baku
+   *
+   * Maintenance:
+   * kategori Maintenance
    */
+
   await createExpense({
     tanggal:
       savedPurchase.tanggal,
@@ -545,6 +661,12 @@ export async function createPurchase(
   return savedPurchase;
 }
 
+/*
+ * ============================
+ * UPDATE PURCHASE
+ * ============================
+ */
+
 export async function updatePurchase(
   purchaseId,
   purchase
@@ -556,52 +678,112 @@ export async function updatePurchase(
     purchase.purchaseType ===
     "MAINTENANCE";
 
-  let jumlah;
-  let total;
+  /*
+   * ============================
+   * INPUT
+   * ============================
+   */
+
+  const jumlahSediaan =
+    Number(
+      purchase.jumlahSediaan || 0
+    );
+
+  const isiPerSediaan =
+    Number(
+      purchase.isiPerSediaan || 0
+    );
+
+  const hargaSatuan =
+    Number(
+      purchase.hargaSatuan || 0
+    );
 
   /*
-   * Hitung ulang quantity inventory
-   * berdasarkan kemasan baru.
+   * ============================
+   * VALIDASI
+   * ============================
    */
-  if (!isMaintenance) {
-    jumlah =
-      calculateInventoryQuantity({
-        jumlahSediaan:
-          Number(
-            purchase.jumlahSediaan
-          ),
 
-        isiPerSediaan:
-          Number(
-            purchase.isiPerSediaan
-          ),
-
-        satuanSediaan:
-          purchase.satuanSediaan,
-
-        satuanInventory:
-          purchase.satuan,
-      });
-
-    total =
-      Number(
-        purchase.jumlahSediaan
-      ) *
-      Number(
-        purchase.hargaSatuan
-      );
-  } else {
-    jumlah =
-      Number(
-        purchase.jumlah
-      );
-
-    total =
-      jumlah *
-      Number(
-        purchase.hargaSatuan
-      );
+  if (
+    jumlahSediaan <= 0
+  ) {
+    throw new Error(
+      "Jumlah sediaan harus lebih dari 0."
+    );
   }
+
+  if (
+    isiPerSediaan <= 0
+  ) {
+    throw new Error(
+      "Isi per sediaan harus lebih dari 0."
+    );
+  }
+
+  if (
+    !purchase.satuanSediaan
+  ) {
+    throw new Error(
+      "Satuan isi wajib diisi."
+    );
+  }
+
+  if (
+    !purchase.satuan
+  ) {
+    throw new Error(
+      "Satuan inventory wajib diisi."
+    );
+  }
+
+  if (
+    hargaSatuan < 0
+  ) {
+    throw new Error(
+      "Harga per sediaan tidak valid."
+    );
+  }
+
+  /*
+   * ============================
+   * HITUNG QUANTITY
+   * ============================
+   */
+
+  const jumlah =
+    calculateInventoryQuantity({
+      jumlahSediaan,
+      isiPerSediaan,
+      satuanSediaan:
+        purchase.satuanSediaan,
+      satuanInventory:
+        purchase.satuan,
+    });
+
+  if (
+    jumlah <= 0
+  ) {
+    throw new Error(
+      "Jumlah quantity yang dihitung tidak valid."
+    );
+  }
+
+  /*
+   * ============================
+   * HITUNG TOTAL
+   * ============================
+   */
+
+  const total =
+    jumlahSediaan *
+    hargaSatuan;
+
+  /*
+   * ============================
+   * PURCHASE PAYLOAD
+   * ============================
+   */
 
   const purchasePayload = {
     tanggal:
@@ -621,36 +803,42 @@ export async function updatePurchase(
         ? purchase.maintenanceItemId
         : null,
 
+    /*
+     * Quantity aktual.
+     */
+
     jumlah,
 
     satuan:
       purchase.satuan,
 
+    /*
+     * Harga per sediaan.
+     */
+
     harga_satuan:
-      Number(
-        purchase.hargaSatuan
-      ),
+      hargaSatuan,
+
+    /*
+     * Total pembayaran.
+     */
 
     total,
 
+    /*
+     * Detail sediaan.
+     *
+     * Berlaku untuk kedua tipe.
+     */
+
     jumlah_sediaan:
-      isMaintenance
-        ? null
-        : Number(
-            purchase.jumlahSediaan
-          ),
+      jumlahSediaan,
 
     isi_per_sediaan:
-      isMaintenance
-        ? null
-        : Number(
-            purchase.isiPerSediaan
-          ),
+      isiPerSediaan,
 
     satuan_sediaan:
-      isMaintenance
-        ? null
-        : purchase.satuanSediaan,
+      purchase.satuanSediaan,
 
     keterangan:
       purchase.keterangan ||
@@ -659,6 +847,12 @@ export async function updatePurchase(
     updated_by:
       user.id,
   };
+
+  /*
+   * ============================
+   * UPDATE PURCHASE
+   * ============================
+   */
 
   const {
     data: purchaseData,
@@ -699,9 +893,11 @@ export async function updatePurchase(
     );
 
   /*
-   * Cari transaksi inventory
-   * terkait purchase ini.
+   * ============================
+   * CARI INVENTORY TRANSACTION
+   * ============================
    */
+
   const {
     data:
       inventoryTransaction,
@@ -726,7 +922,9 @@ export async function updatePurchase(
     )
     .maybeSingle();
 
-  if (inventoryLookupError) {
+  if (
+    inventoryLookupError
+  ) {
     throw inventoryLookupError;
   }
 
@@ -735,6 +933,7 @@ export async function updatePurchase(
    * INGREDIENT
    * ============================
    */
+
   if (
     updatedPurchase.purchaseType ===
     "INGREDIENT"
@@ -778,7 +977,9 @@ export async function updatePurchase(
             inventoryTransaction.id
           );
 
-      if (inventoryError) {
+      if (
+        inventoryError
+      ) {
         throw inventoryError;
       }
     } else {
@@ -792,7 +993,8 @@ export async function updatePurchase(
         ingredientId:
           updatedPurchase.ingredientId,
 
-        recipeId: null,
+        recipeId:
+          null,
 
         productionBatchId:
           null,
@@ -820,7 +1022,15 @@ export async function updatePurchase(
    * ============================
    * MAINTENANCE
    * ============================
+   *
+   * Maintenance TIDAK boleh
+   * mempunyai inventory transaction.
+   *
+   * Kalau data lama ternyata
+   * pernah mempunyai transaction,
+   * kita bersihkan.
    */
+
   else {
     if (
       inventoryTransaction
@@ -854,11 +1064,14 @@ export async function updatePurchase(
   }
 
   /*
-   * Update expense sesuai
-   * harga aktual purchasing.
+   * ============================
+   * UPDATE EXPENSE
+   * ============================
    */
+
   const {
-    error: expenseError,
+    error:
+      expenseError,
   } =
     await supabase
       .from("expenses")
@@ -894,12 +1107,20 @@ export async function updatePurchase(
         false
       );
 
-  if (expenseError) {
+  if (
+    expenseError
+  ) {
     throw expenseError;
   }
 
   return updatedPurchase;
 }
+
+/*
+ * ============================
+ * SOFT DELETE PURCHASE
+ * ============================
+ */
 
 export async function softDeletePurchase(
   purchaseId
@@ -908,8 +1129,11 @@ export async function softDeletePurchase(
     await getCurrentUser();
 
   /*
-   * Soft delete purchase.
+   * ============================
+   * SOFT DELETE PURCHASE
+   * ============================
    */
+
   const {
     error:
       purchaseError,
@@ -928,14 +1152,26 @@ export async function softDeletePurchase(
         purchaseId
       );
 
-  if (purchaseError) {
+  if (
+    purchaseError
+  ) {
     throw purchaseError;
   }
 
   /*
-   * Hapus pengaruh purchase
-   * terhadap inventory.
+   * ============================
+   * SOFT DELETE INVENTORY
+   * ============================
+   *
+   * Hanya bahan baku yang
+   * seharusnya punya transaksi
+   * inventory.
+   *
+   * Maintenance kalau ternyata
+   * punya transaksi lama juga
+   * akan dibersihkan.
    */
+
   const {
     error:
       inventoryError,
@@ -964,13 +1200,18 @@ export async function softDeletePurchase(
         false
       );
 
-  if (inventoryError) {
+  if (
+    inventoryError
+  ) {
     throw inventoryError;
   }
 
   /*
-   * Hapus expense terkait.
+   * ============================
+   * SOFT DELETE EXPENSE
+   * ============================
    */
+
   const {
     error:
       expenseError,
@@ -993,7 +1234,9 @@ export async function softDeletePurchase(
         false
       );
 
-  if (expenseError) {
+  if (
+    expenseError
+  ) {
     throw expenseError;
   }
 }

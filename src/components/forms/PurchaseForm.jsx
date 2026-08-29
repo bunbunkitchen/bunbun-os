@@ -30,15 +30,11 @@ const INITIAL_FORM = {
   maintenanceItemId: "",
   supplierId: "",
 
-  // Bahan baku
   jumlahSediaan: "",
   isiPerSediaan: "",
   satuanSediaan: "",
 
-  // Maintenance / data lama
-  jumlah: "",
   satuan: "",
-
   hargaSatuan: "",
   keterangan: "",
 };
@@ -56,7 +52,9 @@ function toBaseQuantity(
   const value = Number(quantity || 0);
   const normalized = normalizeUnit(unit);
 
-  if (normalized === "kg") {
+  if (
+    normalized === "kg"
+  ) {
     return value * 1000;
   }
 
@@ -77,7 +75,9 @@ function fromBaseQuantity(
   const value = Number(quantity || 0);
   const normalized = normalizeUnit(unit);
 
-  if (normalized === "kg") {
+  if (
+    normalized === "kg"
+  ) {
     return value / 1000;
   }
 
@@ -91,6 +91,36 @@ function fromBaseQuantity(
   return value;
 }
 
+function calculateIncomingStock({
+  jumlahSediaan,
+  isiPerSediaan,
+  satuanSediaan,
+  satuanInventory,
+}) {
+  const totalIsi =
+    Number(jumlahSediaan || 0) *
+    Number(isiPerSediaan || 0);
+
+  if (
+    !totalIsi ||
+    !satuanSediaan ||
+    !satuanInventory
+  ) {
+    return 0;
+  }
+
+  const baseQuantity =
+    toBaseQuantity(
+      totalIsi,
+      satuanSediaan
+    );
+
+  return fromBaseQuantity(
+    baseQuantity,
+    satuanInventory
+  );
+}
+
 export default function PurchaseForm({
   initialData = null,
   onSave,
@@ -100,16 +130,20 @@ export default function PurchaseForm({
   const [form, setForm] =
     useState(INITIAL_FORM);
 
-  const [ingredients, setIngredients] =
-    useState([]);
+  const [
+    ingredients,
+    setIngredients,
+  ] = useState([]);
 
   const [
     maintenanceItems,
     setMaintenanceItems,
   ] = useState([]);
 
-  const [suppliers, setSuppliers] =
-    useState([]);
+  const [
+    suppliers,
+    setSuppliers,
+  ] = useState([]);
 
   const [
     loadingMaster,
@@ -127,6 +161,7 @@ export default function PurchaseForm({
    * LOAD MASTER DATA
    * ============================
    */
+
   useEffect(() => {
     async function loadMasterData() {
       try {
@@ -177,6 +212,7 @@ export default function PurchaseForm({
    * LOAD DATA SAAT EDIT
    * ============================
    */
+
   useEffect(() => {
     if (!initialData) {
       setForm({
@@ -195,10 +231,14 @@ export default function PurchaseForm({
       "MAINTENANCE";
 
     /*
-     * Kompatibilitas dengan
-     * purchasing lama yang belum
-     * punya data sediaan.
+     * Data lama maintenance
+     * masih mungkin hanya mempunyai
+     * jumlah dan satuan.
+     *
+     * Kita tetap support agar
+     * data lama tidak rusak.
      */
+
     const legacyJumlah =
       initialData.jumlah ?? "";
 
@@ -238,39 +278,27 @@ export default function PurchaseForm({
           : "",
 
       /*
-       * BAHAN BAKU
+       * SEDIAAN
+       *
+       * Berlaku untuk:
+       * - Bahan Baku
+       * - Maintenance baru
        */
+
       jumlahSediaan:
-        !isMaintenance &&
         initialData.jumlahSediaan != null
           ? initialData.jumlahSediaan
-          : !isMaintenance
-          ? legacyJumlah
-          : "",
+          : legacyJumlah,
 
       isiPerSediaan:
-        !isMaintenance &&
         initialData.isiPerSediaan != null
           ? initialData.isiPerSediaan
-          : !isMaintenance
-          ? 1
-          : "",
+          : 1,
 
       satuanSediaan:
-        !isMaintenance &&
         initialData.satuanSediaan
           ? initialData.satuanSediaan
-          : !isMaintenance
-          ? legacySatuan
-          : "",
-
-      /*
-       * MAINTENANCE
-       */
-      jumlah:
-        isMaintenance
-          ? legacyJumlah
-          : "",
+          : legacySatuan,
 
       satuan:
         initialData.satuan || "",
@@ -290,6 +318,7 @@ export default function PurchaseForm({
    * SELECTED MASTER
    * ============================
    */
+
   const selectedIngredient =
     useMemo(
       () =>
@@ -327,75 +356,49 @@ export default function PurchaseForm({
    * TOTAL PEMBELIAN
    * ============================
    *
-   * Ingredient:
-   * jumlah sediaan × harga/sediaan
+   * Untuk KEDUANYA:
    *
-   * Maintenance:
-   * jumlah × harga satuan
+   * Jumlah Sediaan
+   * ×
+   * Harga per Sediaan
    */
-  const total = useMemo(() => {
-    if (
-      form.purchaseType ===
-      "INGREDIENT"
-    ) {
-      return (
-        Number(
-          form.jumlahSediaan || 0
-        ) *
-        Number(
-          form.hargaSatuan || 0
-        )
-      );
-    }
 
+  const total = useMemo(() => {
     return (
-      Number(form.jumlah || 0) *
+      Number(
+        form.jumlahSediaan || 0
+      ) *
       Number(
         form.hargaSatuan || 0
       )
     );
   }, [
-    form.purchaseType,
     form.jumlahSediaan,
-    form.jumlah,
     form.hargaSatuan,
   ]);
 
   /*
    * ============================
-   * STOK MASUK
+   * STOK YANG MASUK
    * ============================
    */
+
   const stockIncoming =
     useMemo(() => {
-      if (
-        form.purchaseType !==
-          "INGREDIENT" ||
-        !form.jumlahSediaan ||
-        !form.isiPerSediaan ||
-        !form.satuanSediaan ||
-        !form.satuan
-      ) {
-        return 0;
-      }
+      return calculateIncomingStock({
+        jumlahSediaan:
+          form.jumlahSediaan,
 
-      const totalBase =
-        toBaseQuantity(
-          Number(
-            form.jumlahSediaan
-          ) *
-            Number(
-              form.isiPerSediaan
-            ),
-          form.satuanSediaan
-        );
+        isiPerSediaan:
+          form.isiPerSediaan,
 
-      return fromBaseQuantity(
-        totalBase,
-        form.satuan
-      );
+        satuanSediaan:
+          form.satuanSediaan,
+
+        satuanInventory:
+          form.satuan,
+      });
     }, [
-      form.purchaseType,
       form.jumlahSediaan,
       form.isiPerSediaan,
       form.satuanSediaan,
@@ -407,6 +410,7 @@ export default function PurchaseForm({
    * UPDATE FIELD
    * ============================
    */
+
   function updateField(
     name,
     value
@@ -422,6 +426,7 @@ export default function PurchaseForm({
    * CHANGE PURCHASE TYPE
    * ============================
    */
+
   function handlePurchaseTypeChange(
     value
   ) {
@@ -430,48 +435,19 @@ export default function PurchaseForm({
 
       purchaseType: value,
 
-      ingredientId:
-        value === "INGREDIENT"
-          ? previous.ingredientId
-          : "",
+      ingredientId: "",
 
-      maintenanceItemId:
-        value === "MAINTENANCE"
-          ? previous.maintenanceItemId
-          : "",
+      maintenanceItemId: "",
 
-      satuan:
-        value === "INGREDIENT"
-          ? selectedIngredient?.satuan ||
-            ""
-          : selectedMaintenance?.satuan ||
-            "",
+      jumlahSediaan: "",
 
-      hargaSatuan:
-        value === "INGREDIENT"
-          ? ""
-          : selectedMaintenance?.harga ||
-            "",
+      isiPerSediaan: "",
 
-      jumlahSediaan:
-        value === "INGREDIENT"
-          ? previous.jumlahSediaan
-          : "",
+      satuanSediaan: "",
 
-      isiPerSediaan:
-        value === "INGREDIENT"
-          ? previous.isiPerSediaan
-          : "",
+      satuan: "",
 
-      satuanSediaan:
-        value === "INGREDIENT"
-          ? previous.satuanSediaan
-          : "",
-
-      jumlah:
-        value === "MAINTENANCE"
-          ? previous.jumlah
-          : "",
+      hargaSatuan: "",
     }));
   }
 
@@ -480,6 +456,7 @@ export default function PurchaseForm({
    * CHANGE ITEM
    * ============================
    */
+
   function handleItemChange(
     value
   ) {
@@ -505,18 +482,11 @@ export default function PurchaseForm({
           ingredient?.satuan ||
           "",
 
-        /*
-         * Harga master tidak
-         * digunakan.
-         *
-         * User memasukkan harga
-         * aktual pembelian.
-         */
-        hargaSatuan: "",
-
         satuanSediaan:
           ingredient?.satuan ||
           "",
+
+        hargaSatuan: "",
       }));
 
       return;
@@ -540,8 +510,12 @@ export default function PurchaseForm({
         maintenance?.satuan ||
         "",
 
+      satuanSediaan:
+        maintenance?.satuan ||
+        "",
+
       hargaSatuan:
-        maintenance?.harga || "",
+        maintenance?.harga ?? "",
     }));
   }
 
@@ -549,19 +523,8 @@ export default function PurchaseForm({
    * ============================
    * SUBMIT
    * ============================
-   *
-   * PENTING:
-   *
-   * PurchaseForm TIDAK lagi
-   * memanggil onUpdate.
-   *
-   * Baik CREATE maupun EDIT
-   * dikirim melalui onSave.
-   *
-   * MasterPage yang menentukan
-   * apakah operasi tersebut
-   * create atau update.
    */
+
   async function handleSubmit(
     event
   ) {
@@ -572,6 +535,7 @@ export default function PurchaseForm({
     /*
      * TANGGAL
      */
+
     if (!form.tanggal) {
       setError(
         "Tanggal pembelian wajib diisi."
@@ -580,8 +544,9 @@ export default function PurchaseForm({
     }
 
     /*
-     * INGREDIENT
+     * ITEM
      */
+
     if (
       form.purchaseType ===
       "INGREDIENT"
@@ -592,59 +557,7 @@ export default function PurchaseForm({
         );
         return;
       }
-
-      if (
-        !form.jumlahSediaan ||
-        Number(
-          form.jumlahSediaan
-        ) <= 0
-      ) {
-        setError(
-          "Jumlah sediaan harus lebih dari 0."
-        );
-        return;
-      }
-
-      if (
-        !form.isiPerSediaan ||
-        Number(
-          form.isiPerSediaan
-        ) <= 0
-      ) {
-        setError(
-          "Isi per sediaan harus lebih dari 0."
-        );
-        return;
-      }
-
-      if (
-        !form.satuanSediaan ||
-        !form.satuanSediaan.trim()
-      ) {
-        setError(
-          "Satuan sediaan wajib diisi."
-        );
-        return;
-      }
-
-      if (
-        !form.satuan ||
-        !form.satuan.trim()
-      ) {
-        setError(
-          "Satuan inventory tidak ditemukan."
-        );
-        return;
-      }
-    }
-
-    /*
-     * MAINTENANCE
-     */
-    if (
-      form.purchaseType ===
-      "MAINTENANCE"
-    ) {
+    } else {
       if (
         !form.maintenanceItemId
       ) {
@@ -653,28 +566,81 @@ export default function PurchaseForm({
         );
         return;
       }
+    }
 
-      if (
-        !form.jumlah ||
-        Number(form.jumlah) <= 0
-      ) {
-        setError(
-          "Jumlah pembelian harus lebih dari 0."
-        );
-        return;
-      }
+    /*
+     * JUMLAH SEDIAAN
+     */
+
+    if (
+      !form.jumlahSediaan ||
+      Number(
+        form.jumlahSediaan
+      ) <= 0
+    ) {
+      setError(
+        "Jumlah sediaan harus lebih dari 0."
+      );
+      return;
+    }
+
+    /*
+     * ISI PER SEDIAAN
+     */
+
+    if (
+      !form.isiPerSediaan ||
+      Number(
+        form.isiPerSediaan
+      ) <= 0
+    ) {
+      setError(
+        "Isi per sediaan harus lebih dari 0."
+      );
+      return;
+    }
+
+    /*
+     * SATUAN ISI
+     */
+
+    if (
+      !form.satuanSediaan ||
+      !form.satuanSediaan.trim()
+    ) {
+      setError(
+        "Satuan isi wajib dipilih."
+      );
+      return;
+    }
+
+    /*
+     * SATUAN INVENTORY
+     */
+
+    if (
+      !form.satuan ||
+      !form.satuan.trim()
+    ) {
+      setError(
+        "Satuan inventory tidak ditemukan."
+      );
+      return;
     }
 
     /*
      * HARGA
      */
+
     if (
       form.hargaSatuan === "" ||
       form.hargaSatuan === null ||
-      Number(form.hargaSatuan) < 0
+      Number(
+        form.hargaSatuan
+      ) < 0
     ) {
       setError(
-        "Harga pembelian tidak valid."
+        "Harga per sediaan tidak valid."
       );
       return;
     }
@@ -684,6 +650,7 @@ export default function PurchaseForm({
      * PAYLOAD
      * ============================
      */
+
     const payload = {
       tanggal:
         form.tanggal,
@@ -715,58 +682,57 @@ export default function PurchaseForm({
           : null,
 
       /*
-       * Bahan baku
+       * SEDIAAN
        */
+
       jumlahSediaan:
-        form.purchaseType ===
-        "INGREDIENT"
-          ? Number(
-              form.jumlahSediaan
-            )
-          : null,
+        Number(
+          form.jumlahSediaan
+        ),
 
       isiPerSediaan:
-        form.purchaseType ===
-        "INGREDIENT"
-          ? Number(
-              form.isiPerSediaan
-            )
-          : null,
+        Number(
+          form.isiPerSediaan
+        ),
 
       satuanSediaan:
-        form.purchaseType ===
-        "INGREDIENT"
-          ? form.satuanSediaan.trim()
-          : null,
+        form.satuanSediaan.trim(),
 
       /*
-       * Maintenance
+       * Inventory
+       *
+       * Nilai ini adalah hasil
+       * konversi total isi sediaan.
        */
+
       jumlah:
-        form.purchaseType ===
-        "MAINTENANCE"
-          ? Number(form.jumlah)
-          : null,
+        stockIncoming,
 
       satuan:
         form.satuan,
+
+      /*
+       * Harga untuk 1 sediaan.
+       */
 
       hargaSatuan:
         Number(
           form.hargaSatuan
         ),
 
+      /*
+       * Total:
+       *
+       * jumlah sediaan
+       * ×
+       * harga per sediaan
+       */
+
       keterangan:
         form.keterangan.trim(),
     };
 
     try {
-      /*
-       * SATU JALUR:
-       *
-       * CREATE → MasterPage handleSubmit
-       * EDIT   → MasterPage handleSubmit
-       */
       await onSave(payload);
     } catch (err) {
       console.error(
@@ -788,6 +754,7 @@ export default function PurchaseForm({
    * LOADING
    * ============================
    */
+
   if (loadingMaster) {
     return (
       <div className="p-6 text-sm text-gray-500">
@@ -801,6 +768,7 @@ export default function PurchaseForm({
    * RENDER
    * ============================
    */
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -962,197 +930,135 @@ export default function PurchaseForm({
         )}
       </FormField>
 
-      {form.purchaseType ===
-        "INGREDIENT" && (
-        <>
-          <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-            <p className="text-sm font-medium text-gray-700">
-              Sediaan Pembelian
-            </p>
+      <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
+        <p className="text-sm font-medium text-gray-700">
+          Sediaan Pembelian
+        </p>
 
-            <p className="mt-1 text-xs text-gray-500">
-              Isi sesuai kemasan yang
-              benar-benar kamu beli.
-            </p>
-          </div>
+        <p className="mt-1 text-xs text-gray-500">
+          Isi sesuai kemasan yang
+          benar-benar kamu beli.
+        </p>
+      </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              label="Jumlah Sediaan"
-              type="number"
-              value={
-                form.jumlahSediaan
-              }
-              onChange={(event) =>
-                updateField(
-                  "jumlahSediaan",
-                  event.target.value
-                )
-              }
-              min="0"
-              step="0.001"
-              placeholder="Contoh: 4"
-              required
-            />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          label="Jumlah Sediaan"
+          type="number"
+          value={
+            form.jumlahSediaan
+          }
+          onChange={(event) =>
+            updateField(
+              "jumlahSediaan",
+              event.target.value
+            )
+          }
+          min="0"
+          step="0.001"
+          placeholder="Contoh: 4"
+          required
+        />
 
-            <FormField
-              label="Isi per Sediaan"
-              type="number"
-              value={
-                form.isiPerSediaan
-              }
-              onChange={(event) =>
-                updateField(
-                  "isiPerSediaan",
-                  event.target.value
-                )
-              }
-              min="0"
-              step="0.001"
-              placeholder="Contoh: 250"
-              required
-            />
-          </div>
+        <FormField
+          label="Isi per Sediaan"
+          type="number"
+          value={
+            form.isiPerSediaan
+          }
+          onChange={(event) =>
+            updateField(
+              "isiPerSediaan",
+              event.target.value
+            )
+          }
+          min="0"
+          step="0.001"
+          placeholder="Contoh: 250"
+          required
+        />
+      </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              label="Satuan Isi"
-              type="select"
-              value={
-                form.satuanSediaan
-              }
-              onChange={(event) =>
-                updateField(
-                  "satuanSediaan",
-                  event.target.value
-                )
-              }
-              required
-            >
-              <option value="">
-                -- Pilih satuan --
-              </option>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          label="Satuan Isi"
+          type="select"
+          value={
+            form.satuanSediaan
+          }
+          onChange={(event) =>
+            updateField(
+              "satuanSediaan",
+              event.target.value
+            )
+          }
+          required
+        >
+          <option value="">
+            -- Pilih satuan --
+          </option>
 
-              <option value="gram">
-                gram
-              </option>
+          <option value="gram">
+            gram
+          </option>
 
-              <option value="kg">
-                kg
-              </option>
+          <option value="kg">
+            kg
+          </option>
 
-              <option value="ml">
-                ml
-              </option>
+          <option value="ml">
+            ml
+          </option>
 
-              <option value="liter">
-                liter
-              </option>
+          <option value="liter">
+            liter
+          </option>
 
-              <option value="pcs">
-                pcs
-              </option>
-            </FormField>
+          <option value="pcs">
+            pcs
+          </option>
+        </FormField>
 
-            <FormField
-              label="Satuan Inventory"
-              value={form.satuan}
-              onChange={(event) =>
-                updateField(
-                  "satuan",
-                  event.target.value
-                )
-              }
-              disabled
-            />
-          </div>
+        <FormField
+          label="Satuan Inventory"
+          value={form.satuan}
+          disabled
+        />
+      </div>
 
-          <FormField
-            label="Harga per Sediaan"
-            type="number"
-            value={
-              form.hargaSatuan
+      <FormField
+        label="Harga per Sediaan"
+        type="number"
+        value={
+          form.hargaSatuan
+        }
+        onChange={(event) =>
+          updateField(
+            "hargaSatuan",
+            event.target.value
+          )
+        }
+        min="0"
+        step="1"
+        placeholder="Contoh: 7000"
+        required
+      />
+
+      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <p className="text-sm font-medium text-blue-800">
+          Stok yang Masuk
+        </p>
+
+        <p className="mt-1 text-2xl font-bold text-blue-700">
+          {stockIncoming.toLocaleString(
+            "id-ID",
+            {
+              maximumFractionDigits: 3,
             }
-            onChange={(event) =>
-              updateField(
-                "hargaSatuan",
-                event.target.value
-              )
-            }
-            min="0"
-            step="1"
-            placeholder="Contoh: 7000"
-            required
-          />
-
-          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-            <p className="text-sm font-medium text-blue-800">
-              Stok yang Masuk
-            </p>
-
-            <p className="mt-1 text-2xl font-bold text-blue-700">
-              {stockIncoming.toLocaleString(
-                "id-ID",
-                {
-                  maximumFractionDigits: 3,
-                }
-              )}{" "}
-              {form.satuan}
-            </p>
-          </div>
-        </>
-      )}
-
-      {form.purchaseType ===
-        "MAINTENANCE" && (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              label="Jumlah"
-              type="number"
-              value={form.jumlah}
-              onChange={(event) =>
-                updateField(
-                  "jumlah",
-                  event.target.value
-                )
-              }
-              min="0"
-              step="0.001"
-              required
-            />
-
-            <FormField
-              label="Satuan"
-              value={form.satuan}
-              onChange={(event) =>
-                updateField(
-                  "satuan",
-                  event.target.value
-                )
-              }
-              required
-            />
-          </div>
-
-          <FormField
-            label="Harga Satuan"
-            type="number"
-            value={
-              form.hargaSatuan
-            }
-            onChange={(event) =>
-              updateField(
-                "hargaSatuan",
-                event.target.value
-              )
-            }
-            min="0"
-            step="1"
-            required
-          />
-        </>
-      )}
+          )}{" "}
+          {form.satuan}
+        </p>
+      </div>
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
         <p className="text-sm font-medium text-amber-800">
