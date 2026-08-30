@@ -17,6 +17,7 @@ import {
   getProductStockErrorMessage,
   recordMultiProductRelease,
 } from "../../services/productStockService";
+import { getFrozenProductBalances } from "../../services/frozenStockService";
 import {
   recordBakingResult,
   releaseFrozenStockForProofing,
@@ -31,6 +32,7 @@ function getLocalDate() {
 export default function ProductStock() {
   const toast = useToast();
   const [frozenLots, setFrozenLots] = useState([]);
+  const [frozenBalances, setFrozenBalances] = useState([]);
   const [processingSplits, setProcessingSplits] = useState([]);
   const [finishedBalances, setFinishedBalances] = useState([]);
   const [releaseLot, setReleaseLot] = useState(null);
@@ -40,12 +42,14 @@ export default function ProductStock() {
   const [pageError, setPageError] = useState("");
 
   const loadData = useCallback(async () => {
-    const [lots, processing, finished] = await Promise.all([
+    const [lots, frozen, processing, finished] = await Promise.all([
       getAvailableFrozenLots(),
+      getFrozenProductBalances(),
       getFrozenProcessingSplits(),
       getFinishedProductBalances(),
     ]);
     setFrozenLots(lots);
+    setFrozenBalances(frozen);
     setProcessingSplits(processing);
     setFinishedBalances(finished.filter((item) => item.saldo !== 0));
   }, []);
@@ -128,23 +132,32 @@ export default function ProductStock() {
       )}
 
       <section className="mb-8">
-        <h2 className="mb-4 text-xl font-bold text-gray-900">Stok Frozen</h2>
-        {!frozenLots.length ? (
-          <Card><p className="py-6 text-center text-gray-500">Belum ada stok frozen yang tersedia.</p></Card>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-gray-900">Stok Frozen</h2>
+          <p className="mt-1 text-sm text-gray-500">Saldo total setiap jenis frozen yang tersedia.</p>
+        </div>
+
+        {!frozenBalances.length ? (
+          <Card><p className="py-6 text-center text-gray-500">Belum ada stok frozen.</p></Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {frozenLots.map((lot) => (
-              <Card key={lot.lotId}>
-                <p className="text-sm text-gray-500">{lot.productSku || "Produk"}</p>
-                <h3 className="mt-1 text-lg font-bold text-gray-900">{lot.productNama}</h3>
-                <p className="mt-3 text-sm text-gray-500">Lot</p>
-                <p className="font-semibold text-gray-800">{lot.lotCode}</p>
-                <div className="mt-5 flex items-end justify-between gap-4">
-                  <div><p className="text-sm text-gray-500">Tersedia</p><p className="text-2xl font-bold text-amber-700">{lot.saldo} pcs</p></div>
-                  <Button onClick={() => setReleaseLot(lot)}>Keluarkan Frozen</Button>
+          <Card>
+            <div className="divide-y divide-gray-100">
+              {frozenBalances.map((item) => (
+                <div key={item.productId} className="flex items-center justify-between gap-4 py-4 first:pt-1 last:pb-1">
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500">{item.productSku || "Produk"}</p>
+                    <p className="font-semibold text-gray-900">{item.productNama}</p>
+                  </div>
+                  <p className="shrink-0 text-lg font-bold text-amber-700">{item.saldo} pcs</p>
                 </div>
-              </Card>
-            ))}
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {frozenLots.length > 0 && (
+          <div className="mt-4 flex justify-end">
+            <p className="text-xs text-gray-500">Pengeluaran frozen tetap dilakukan berdasarkan lot untuk menjaga traceability.</p>
           </div>
         )}
       </section>
