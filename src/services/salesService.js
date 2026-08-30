@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase";
+import { createProductStockOperationKey } from "./productStockService";
 
 const SALES_TABLE = "sales";
 const ITEMS_TABLE = "sale_items";
@@ -26,7 +27,8 @@ function mapSaleItem(row) {
     sellingPrice: Number(row.selling_price || 0),
     subtotal: Number(row.subtotal || 0),
     orderType: row.order_type || "",
-    orderTypeLabel: ORDER_TYPE_LABELS[row.order_type] || "Belum diisi",
+    orderTypeLabel:
+      ORDER_TYPE_LABELS[row.order_type] || "Belum diisi",
   };
 }
 
@@ -35,9 +37,11 @@ function mapSale(row) {
     id: row.id,
     saleDate: row.sale_date,
     salesChannel: row.sales_channel,
-    channelLabel: CHANNEL_LABELS[row.sales_channel] || row.sales_channel,
+    channelLabel:
+      CHANNEL_LABELS[row.sales_channel] || row.sales_channel,
     totalAmount: Number(row.total_amount || 0),
     notes: row.notes || "",
+    operationKey: row.operation_key || null,
     items: (row.sale_items || []).map(mapSaleItem),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -93,17 +97,28 @@ function normalizeItems(items = []) {
     });
 }
 
-function buildItemPayload(saleId, items) {
-  return items.map((item) => ({
-    sale_id: saleId,
-    product_id: item.productId,
-    product_sku: item.productSku,
-    product_name: item.productName,
-    quantity: item.quantity,
-    selling_price: item.sellingPrice,
-    subtotal: item.subtotal,
-    order_type: item.orderType,
-  }));
+async function getSaleById(saleId) {
+  const { data, error } = await supabase
+    .from(SALES_TABLE)
+    .select(`
+      *,
+      sale_items (
+        id,
+        sale_id,
+        product_id,
+        product_sku,
+        product_name,
+        quantity,
+        selling_price,
+        subtotal,
+        order_type
+      )
+    `)
+    .eq("id", saleId)
+    .single();
+
+  if (error) throw error;
+  return mapSale(data);
 }
 
 export async function getAllSales() {
@@ -132,104 +147,76 @@ export async function getAllSales() {
 }
 
 export async function createSale(sale) {
-  const user = await getCurrentUser();
+  await getCurrentUser();
+
   const items = normalizeItems(sale.items);
 
   if (items.length === 0) {
     throw new Error("Minimal harus ada satu produk dalam penjualan.");
   }
 
-  const totalAmount = items.reduce(
-    (total, item) => total + item.subtotal,
-    0
+  const operationKey =
+    sale.operationKey || createProductStockOperationKey();
+
+  const { data, error } = await supabase.rpc(
+    "record_sale_transaction",
+    {
+      p_sale_date:
+        sale.saleDate || new Date().toISOString().slice(0, 10),
+      p_sales_channel: sale.salesChannel,
+      p_notes: sale.notes?.trim() || null,
+      p_items: items,
+      p_operation_key: operationKey,
+    }
   );
 
-  const salePayload = {
-    sale_date:
-      sale.saleDate || new Date().toISOString().slice(0, 10),
-    sales_channel: sale.salesChannel,
-    total_amount: totalAmount,
-    notes: sale.notes?.trim() || null,
-    is_deleted: false,
-    created_by: user.id,
-    updated_by: user.id,
-  };
-
-  const { data: saleData, error: saleError } = await supabase
-    .from(SALES_TABLE)
-    .insert(salePayload)
-    .select("*")
-    .single();
-
-  if (saleError) throw saleError;
-
-  const { data: itemData, error: itemError } = await supabase
-    .from(ITEMS_TABLE)
-    .insert(buildItemPayload(saleData.id, items))
-    .select("*");
-
-  if (itemError) {
-    await supabase.from(SALES_TABLE).delete().eq("id", saleData.id);
-    throw itemError;
+  if (error) {
+    throw error;
   }
 
-  return mapSale({ ...saleData, sale_items: itemData });
+  return getSaleById(data.sale_id);
 }
 
 export async function updateSale(saleId, sale) {
-  const user = await getCurrentUser();
+  await getCurrentUser();
+
   const items = normalizeItems(sale.items);
 
   if (items.length === 0) {
     throw new Error("Minimal harus ada satu produk dalam penjualan.");
   }
 
-  const totalAmount = items.reduce(
-    (total, item) => total + item.subtotal,
-    0
+  const { data, error } = await supabase.rpc(
+    "update_sale_transaction",
+    {
+      p_sale_id: saleId,
+      p_sale_date: sale.saleDate,
+      p_sales_channel: sale.salesChannel,
+      p_notes: sale.notes?.trim() || null,
+      p_items: items,
+    }
   );
 
-  const { data: saleData, error: saleError } = await supabase
-    .from(SALES_TABLE)
-    .update({
-      sale_date: sale.saleDate,
-      sales_channel: sale.salesChannel,
-      total_amount: totalAmount,
-      notes: sale.notes?.trim() || null,
-      updated_by: user.id,
-    })
-    .eq("id", saleId)
-    .select("*")
-    .single();
+  if (error) {
+    throw error;
+  }
 
-  if (saleError) throw saleError;
-
-  const { error: deleteItemsError } = await supabase
-    .from(ITEMS_TABLE)
-    .delete()
-    .eq("sale_id", saleId);
-
-  if (deleteItemsError) throw deleteItemsError;
-
-  const { data: itemData, error: itemError } = await supabase
-    .from(ITEMS_TABLE)
-    .insert(buildItemPayload(saleId, items))
-    .select("*");
-
-  if (itemError) throw itemError;
-
-  return mapSale({ ...saleData, sale_items: itemData });
+  return getSaleById(data.sale_id);
 }
 
 export async function softDeleteSale(saleId) {
-  const user = await getCurrentUser();
+  await getCurrentUser();
 
-  const { error } = await supabase
-    .from(SALES_TABLE)
-    .update({ is_deleted: true, updated_by: user.id })
-    .eq("id", saleId);
+  const { error } = await supabase.rpc(
+    "delete_sale_transaction",
+    {
+      p_sale_id: saleId,
+    }
+  );
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 }
 
 export function getSalesChannelLabel(channel) {
