@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import Button from "../ui/Button";
 import { getAllProducts } from "../../services/productService";
+import { createProductStockOperationKey } from "../../services/productStockService";
 
 const CHANNEL_OPTIONS = [
   { value: "PUBLIC_HUB", label: "Public Hub" },
@@ -45,6 +46,7 @@ export default function SalesForm({
   saving = false,
 }) {
   const isEdit = Boolean(initialData);
+  const operationKeyRef = useRef(createProductStockOperationKey());
 
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -156,6 +158,7 @@ export default function SalesForm({
     setItems([emptyItem()]);
     setNotes("");
     setError("");
+    operationKeyRef.current = createProductStockOperationKey();
   }
 
   async function handleSubmit(event) {
@@ -193,7 +196,13 @@ export default function SalesForm({
     }
 
     try {
-      await onSave({ saleDate, salesChannel, notes, items: validItems });
+      await onSave({
+        saleDate,
+        salesChannel,
+        notes,
+        items: validItems,
+        operationKey: operationKeyRef.current,
+      });
 
       if (!isEdit) {
         setSavedTransactions((value) => value + 1);
