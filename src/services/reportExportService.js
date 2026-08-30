@@ -2,473 +2,230 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-function formatDateForFilename(dateString) {
-  return dateString.replaceAll("-", "");
+const REPORT_LABELS = {
+  sales: "Penjualan",
+  income: "Pemasukan",
+  expense: "Pengeluaran",
+  purchase: "Purchasing",
+  stock: "Stok Produk",
+  production: "Produksi",
+};
+
+function formatDate(dateString) {
+  if (!dateString) return "-";
+  const [year, month, day] = dateString.split("-");
+  return day && month && year ? `${day}/${month}/${year}` : dateString;
 }
 
-function setColumnWidths(worksheet, widths) {
-  worksheet["!cols"] = widths.map((width) => ({
-    wch: width,
-  }));
-}
-
-export function exportReportToExcel(report) {
-  if (!report) {
-    throw new Error(
-      "Data laporan belum tersedia."
-    );
-  }
-
-  const workbook = XLSX.utils.book_new();
-
-  const {
-    startDate,
-    endDate,
-  } = report.period;
-
-  /*
-   * SHEET 1 — RINGKASAN
-   */
-  const summaryRows = [
-    ["BUNBUN KITCHEN"],
-    ["Laporan Operasional dan Keuangan"],
-    [],
-    ["Periode", `${startDate} s.d. ${endDate}`],
-    [],
-    ["RINGKASAN KEUANGAN"],
-    ["Total Pemasukan", report.summary.totalIncome],
-    ["Total Pengeluaran", report.summary.totalExpense],
-    ["Saldo Bersih", report.summary.netProfit],
-    [],
-    ["PENGELUARAN PER KATEGORI"],
-    [
-      "Gaji",
-      report.summary.expenseByCategory.Gaji,
-    ],
-    [
-      "Bahan Baku",
-      report.summary.expenseByCategory[
-        "Bahan Baku"
-      ],
-    ],
-    [
-      "Maintenance",
-      report.summary.expenseByCategory
-        .Maintenance,
-    ],
-    [],
-    ["RINGKASAN PRODUKSI"],
-    ["Total Batch", report.summary.totalBatches],
-    [
-      "Batch Selesai",
-      report.summary.finishedBatches,
-    ],
-    [
-      "Produk Selesai",
-      report.summary.totalFinished,
-    ],
-    ["Reject", report.summary.totalReject],
-  ];
-
-  const summarySheet =
-    XLSX.utils.aoa_to_sheet(summaryRows);
-
-  summarySheet["B7"].z = '"Rp"#,##0';
-  summarySheet["B8"].z = '"Rp"#,##0';
-  summarySheet["B9"].z = '"Rp"#,##0';
-  summarySheet["B12"].z = '"Rp"#,##0';
-  summarySheet["B13"].z = '"Rp"#,##0';
-  summarySheet["B14"].z = '"Rp"#,##0';
-
-  setColumnWidths(summarySheet, [30, 24]);
-
-  XLSX.utils.book_append_sheet(
-    workbook,
-    summarySheet,
-    "Ringkasan"
-  );
-
-  /*
-   * SHEET 2 — PEMASUKAN
-   */
-  const incomeRows = report.incomes.map(
-    (item) => ({
-      "Tanggal Setoran": item.tanggal,
-      "Asal Setoran": item.asalSetoran || "-",
-      "Kode Lot": item.kodeLot || "-",
-      "Nominal Setoran Aktual": Number(
-        item.totalPenjualan
-      ),
-      Catatan: item.keterangan || "",
-    })
-  );
-
-  const incomeSheet =
-    XLSX.utils.json_to_sheet(incomeRows);
-
-  setColumnWidths(
-    incomeSheet,
-    [16, 28, 32, 24, 40]
-  );
-
-  for (
-    let row = 2;
-    row <= incomeRows.length + 1;
-    row += 1
-  ) {
-    const cell = incomeSheet[`D${row}`];
-
-    if (cell) {
-      cell.z = '"Rp"#,##0';
-    }
-  }
-
-  XLSX.utils.book_append_sheet(
-    workbook,
-    incomeSheet,
-    "Pemasukan"
-  );
-
-  /*
-   * SHEET 3 — PENGELUARAN
-   */
-  const expenseRows = report.expenses.map(
-    (item) => ({
-      Tanggal: item.tanggal,
-      Kategori: item.kategori,
-      Nominal: Number(item.nominal),
-      Keterangan: item.keterangan || "",
-    })
-  );
-
-  const expenseSheet =
-    XLSX.utils.json_to_sheet(expenseRows);
-
-  setColumnWidths(
-    expenseSheet,
-    [14, 20, 18, 40]
-  );
-
-  XLSX.utils.book_append_sheet(
-    workbook,
-    expenseSheet,
-    "Pengeluaran"
-  );
-
-  /*
-   * SHEET 4 — PRODUKSI
-   */
-  const productionRows = report.batches.map(
-    (item) => ({
-      Tanggal: item.tanggal,
-      "Kode Batch": item.kode,
-      Recipe: item.recipe,
-      Target: Number(item.target),
-      Selesai: Number(item.selesai),
-      Reject: Number(item.reject),
-      Status: item.status,
-    })
-  );
-
-  const productionSheet =
-    XLSX.utils.json_to_sheet(productionRows);
-
-  setColumnWidths(
-    productionSheet,
-    [14, 30, 28, 12, 12, 12, 16]
-  );
-
-  XLSX.utils.book_append_sheet(
-    workbook,
-    productionSheet,
-    "Produksi"
-  );
-
-  const filename =
-    `Laporan-Bunbun-Kitchen-` +
-    `${formatDateForFilename(startDate)}-` +
-    `${formatDateForFilename(endDate)}.xlsx`;
-
-  XLSX.writeFile(workbook, filename, {
-    compression: true,
-  });
+function formatFilenameDate(dateString) {
+  return String(dateString || "").replaceAll("-", "");
 }
 
 function formatRupiah(value) {
-  return `Rp${Number(value || 0).toLocaleString(
-    "id-ID"
-  )}`;
+  return `Rp${Number(value || 0).toLocaleString("id-ID")}`;
 }
 
-function formatDateForPdf(dateString) {
-  if (!dateString) {
-    return "-";
-  }
-
-  const [year, month, day] =
-    dateString.split("-");
-
-  return `${day}-${month}-${year}`;
+function stockTypeLabel(type) {
+  const labels = {
+    FINISHED_IN: "Produk Jadi Masuk",
+    CAFE_OUT: "Produk Keluar",
+    CAFE_IN: "Produk Kembali",
+    OPENING_BALANCE: "Saldo Awal",
+    FROZEN_IN: "Frozen Masuk",
+    FROZEN_OUT: "Frozen Keluar",
+  };
+  return labels[type] || type || "-";
 }
 
-export function exportReportToPdf(report) {
-  if (!report) {
-    throw new Error(
-      "Data laporan belum tersedia."
-    );
+function buildRows(report, type) {
+  if (type === "income") {
+    return report.incomes.map((item) => ({
+      Tanggal: formatDate(item.tanggal),
+      "Asal Setoran": item.asalSetoran || "-",
+      Jumlah: Number(item.totalPenjualan || 0),
+      Keterangan: item.keterangan || "",
+    }));
   }
 
-  const document = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4",
-  });
+  if (type === "expense") {
+    return report.expenses.map((item) => ({
+      Tanggal: formatDate(item.tanggal),
+      Kategori: item.kategori || "-",
+      Jumlah: Number(item.nominal || 0),
+      Keterangan: item.keterangan || "",
+    }));
+  }
 
-  const {
-    startDate,
-    endDate,
-  } = report.period;
+  if (type === "purchase") {
+    return report.purchases.map((item) => ({
+      Tanggal: formatDate(item.tanggal),
+      Supplier: item.supplierNama || "-",
+      "Bahan Baku": item.ingredientNama || "-",
+      Jumlah: `${Number(item.jumlah || 0).toLocaleString("id-ID")} ${item.satuan || ""}`.trim(),
+      Total: Number(item.total || 0),
+      Keterangan: item.keterangan || "",
+    }));
+  }
+
+  if (type === "sales") {
+    return report.sales.map((item) => ({
+      Kode: item.productSku || "-",
+      Produk: item.productName || "-",
+      "Dine In": Number(item.dineIn || 0),
+      "Take Away": Number(item.takeAway || 0),
+      "Total Qty": Number(item.totalQty || 0),
+      "Total Penjualan": Number(item.totalAmount || 0),
+    }));
+  }
+
+  if (type === "stock") {
+    return report.stock.map((item) => ({
+      Tanggal: formatDate(item.tanggal),
+      Kode: item.productSku || "-",
+      Produk: item.productName || "-",
+      Pergerakan: stockTypeLabel(item.tipe),
+      Qty: Number(item.jumlah || 0),
+      Satuan: item.satuan || "pcs",
+      Lot: item.lotCode || "-",
+      Keterangan: item.keterangan || "",
+    }));
+  }
+
+  return report.batches.map((item) => ({
+    Tanggal: formatDate(item.tanggal),
+    Batch: item.kode || "-",
+    Recipe: item.recipe || "-",
+    Target: Number(item.target || 0),
+    Selesai: Number(item.selesai || 0),
+    Reject: Number(item.reject || 0),
+    Status: item.status || "-",
+  }));
+}
+
+function getTotal(report, type) {
+  if (type === "income") return report.summary.totalIncome;
+  if (type === "expense") return report.summary.totalExpense;
+  if (type === "purchase") return report.summary.totalPurchase;
+  if (type === "sales") return report.summary.totalSales;
+  return null;
+}
+
+export function exportReportToExcel(report, type) {
+  if (!report) throw new Error("Data laporan belum tersedia.");
+
+  const label = REPORT_LABELS[type] || "Laporan";
+  const rows = buildRows(report, type);
+  const total = getTotal(report, type);
+  const workbook = XLSX.utils.book_new();
+
+  const headerRows = [
+    ["BUNBUN KITCHEN"],
+    [label],
+    [`Periode: ${formatDate(report.period.startDate)} s.d. ${formatDate(report.period.endDate)}`],
+    [],
+  ];
+
+  const sheet = XLSX.utils.aoa_to_sheet(headerRows);
+  XLSX.utils.sheet_add_json(sheet, rows, { origin: "A5" });
+
+  if (total !== null) {
+    const totalRow = rows.length + 6;
+    XLSX.utils.sheet_add_aoa(sheet, [[`TOTAL ${label.toUpperCase()}`, total]], {
+      origin: `A${totalRow}`,
+    });
+    const lastColumn = Object.keys(rows[0] || {}).length;
+    const totalValueColumn = XLSX.utils.encode_col(Math.max(lastColumn - 1, 1));
+    const cell = sheet[`${totalValueColumn}${totalRow}`];
+    if (cell) cell.z = '"Rp"#,##0';
+  }
+
+  if (type === "income") {
+    for (let row = 6; row <= rows.length + 5; row += 1) {
+      if (sheet[`C${row}`]) sheet[`C${row}`].z = '"Rp"#,##0';
+    }
+  }
+
+  if (type === "expense") {
+    for (let row = 6; row <= rows.length + 5; row += 1) {
+      if (sheet[`C${row}`]) sheet[`C${row}`].z = '"Rp"#,##0';
+    }
+  }
+
+  if (type === "purchase") {
+    for (let row = 6; row <= rows.length + 5; row += 1) {
+      if (sheet[`E${row}`]) sheet[`E${row}`].z = '"Rp"#,##0';
+    }
+  }
+
+  if (type === "sales") {
+    for (let row = 6; row <= rows.length + 5; row += 1) {
+      if (sheet[`F${row}`]) sheet[`F${row}`].z = '"Rp"#,##0';
+    }
+  }
+
+  const widths = {
+    income: [16, 30, 20, 42],
+    expense: [16, 22, 20, 42],
+    purchase: [16, 28, 32, 18, 20, 42],
+    sales: [18, 30, 14, 14, 14, 24],
+    stock: [16, 18, 30, 24, 12, 12, 24, 42],
+    production: [16, 28, 30, 14, 14, 14, 18],
+  };
+  sheet["!cols"] = (widths[type] || [20, 30, 20]).map((wch) => ({ wch }));
+
+  XLSX.utils.book_append_sheet(workbook, sheet, label.slice(0, 31));
+
+  const filename = `Laporan-${label.replaceAll(" ", "-")}-${formatFilenameDate(report.period.startDate)}-${formatFilenameDate(report.period.endDate)}.xlsx`;
+  XLSX.writeFile(workbook, filename, { compression: true });
+}
+
+export function exportReportToPdf(report, type) {
+  if (!report) throw new Error("Data laporan belum tersedia.");
+
+  const label = REPORT_LABELS[type] || "Laporan";
+  const rows = buildRows(report, type);
+  const document = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   document.setFontSize(18);
+  document.text("BUNBUN KITCHEN", 14, 16);
+  document.setFontSize(13);
+  document.text(label, 14, 23);
+  document.setFontSize(9);
   document.text(
-    "BUNBUN KITCHEN",
+    `Periode: ${formatDate(report.period.startDate)} s.d. ${formatDate(report.period.endDate)}`,
     14,
-    18
+    29
   );
 
-  document.setFontSize(12);
-  document.text(
-    "Laporan Operasional dan Keuangan",
-    14,
-    25
-  );
-
-  document.setFontSize(10);
-  document.text(
-    `Periode: ${formatDateForPdf(
-      startDate
-    )} s.d. ${formatDateForPdf(
-      endDate
-    )}`,
-    14,
-    32
-  );
+  const headers = Object.keys(rows[0] || {
+    Keterangan: "Tidak ada data",
+  });
+  const body = rows.length
+    ? rows.map((row) => headers.map((header) => {
+        const value = row[header];
+        if (["Jumlah", "Total", "Total Penjualan"].includes(header)) {
+          return formatRupiah(value);
+        }
+        return value ?? "-";
+      }))
+    : [["Tidak ada data pada periode ini"]];
 
   autoTable(document, {
-    startY: 38,
-    head: [["Ringkasan Keuangan", "Nominal"]],
-    body: [
-      [
-        "Total Pemasukan",
-        formatRupiah(
-          report.summary.totalIncome
-        ),
-      ],
-      [
-        "Total Pengeluaran",
-        formatRupiah(
-          report.summary.totalExpense
-        ),
-      ],
-      [
-        "Saldo Bersih",
-        formatRupiah(
-          report.summary.netProfit
-        ),
-      ],
-    ],
+    startY: 35,
+    head: [headers],
+    body,
     theme: "grid",
+    styles: { fontSize: 7, overflow: "linebreak" },
+    headStyles: { fontSize: 7 },
   });
 
-  autoTable(document, {
-    startY:
-      document.lastAutoTable.finalY + 7,
-    head: [
-      [
-        "Pengeluaran per Kategori",
-        "Nominal",
-      ],
-    ],
-    body: [
-      [
-        "Gaji",
-        formatRupiah(
-          report.summary
-            .expenseByCategory.Gaji
-        ),
-      ],
-      [
-        "Bahan Baku",
-        formatRupiah(
-          report.summary
-            .expenseByCategory[
-            "Bahan Baku"
-          ]
-        ),
-      ],
-      [
-        "Maintenance",
-        formatRupiah(
-          report.summary
-            .expenseByCategory
-            .Maintenance
-        ),
-      ],
-    ],
-    theme: "grid",
-  });
+  const total = getTotal(report, type);
+  if (total !== null) {
+    const y = document.lastAutoTable.finalY + 8;
+    document.setFontSize(10);
+    document.text(`${`Total ${label}`}: ${formatRupiah(total)}`, 14, y);
+  }
 
-  autoTable(document, {
-    startY:
-      document.lastAutoTable.finalY + 7,
-    head: [
-      [
-        "Ringkasan Produksi",
-        "Jumlah",
-      ],
-    ],
-    body: [
-      [
-        "Total Batch",
-        report.summary.totalBatches,
-      ],
-      [
-        "Batch Selesai",
-        report.summary.finishedBatches,
-      ],
-      [
-        "Produk Selesai",
-        `${report.summary.totalFinished} pcs`,
-      ],
-      [
-        "Reject",
-        `${report.summary.totalReject} pcs`,
-      ],
-    ],
-    theme: "grid",
-  });
-
-  document.addPage();
-
-  document.setFontSize(14);
-  document.text(
-    "Rincian Pemasukan",
-    14,
-    18
-  );
-
-  autoTable(document, {
-    startY: 24,
-    head: [
-      [
-        "Tanggal Setoran",
-        "Asal Setoran",
-        "Kode Lot",
-        "Nominal Setoran Aktual",
-        "Catatan",
-      ],
-    ],
-    body: report.incomes.map(
-      (item) => [
-        formatDateForPdf(item.tanggal),
-        item.asalSetoran || "-",
-        item.kodeLot || "-",
-        formatRupiah(
-          item.totalPenjualan
-        ),
-        item.keterangan || "-",
-      ]
-    ),
-    theme: "grid",
-    styles: {
-      fontSize: 7,
-      overflow: "linebreak",
-    },
-    columnStyles: {
-      0: { cellWidth: 23 },
-      1: { cellWidth: 34 },
-      2: { cellWidth: 42 },
-      3: { cellWidth: 34, halign: "right" },
-      4: { cellWidth: 48 },
-    },
-  });
-
-  document.addPage();
-
-  document.setFontSize(14);
-  document.text(
-    "Rincian Pengeluaran",
-    14,
-    18
-  );
-
-  autoTable(document, {
-    startY: 24,
-    head: [
-      [
-        "Tanggal",
-        "Kategori",
-        "Nominal",
-        "Keterangan",
-      ],
-    ],
-    body: report.expenses.map(
-      (item) => [
-        formatDateForPdf(item.tanggal),
-        item.kategori,
-        formatRupiah(item.nominal),
-        item.keterangan || "-",
-      ]
-    ),
-    theme: "grid",
-    styles: {
-      fontSize: 8,
-    },
-  });
-
-  document.addPage();
-
-  document.setFontSize(14);
-  document.text(
-    "Rekap Produksi",
-    14,
-    18
-  );
-
-  autoTable(document, {
-    startY: 24,
-    head: [
-      [
-        "Tanggal",
-        "Batch",
-        "Recipe",
-        "Target",
-        "Selesai",
-        "Reject",
-        "Status",
-      ],
-    ],
-    body: report.batches.map(
-      (item) => [
-        formatDateForPdf(item.tanggal),
-        item.kode,
-        item.recipe,
-        item.target,
-        item.selesai,
-        item.reject,
-        item.status,
-      ]
-    ),
-    theme: "grid",
-    styles: {
-      fontSize: 7,
-    },
-  });
-
-  const filename =
-    `Laporan-Bunbun-Kitchen-` +
-    `${startDate.replaceAll("-", "")}-` +
-    `${endDate.replaceAll("-", "")}.pdf`;
-
+  const filename = `Laporan-${label.replaceAll(" ", "-")}-${formatFilenameDate(report.period.startDate)}-${formatFilenameDate(report.period.endDate)}.pdf`;
   document.save(filename);
 }
