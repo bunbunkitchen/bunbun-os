@@ -1,8 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 
 import PageTitle from "../../components/ui/PageTitle";
 import Card from "../../components/ui/Card";
@@ -13,8 +9,8 @@ import LoadingState from "../../components/ui/LoadingState";
 
 import {
   getFinancialReport,
+  REPORT_TYPES,
 } from "../../services/reportService";
-
 import {
   exportReportToExcel,
   exportReportToPdf,
@@ -22,323 +18,182 @@ import {
 
 function getCurrentMonthRange() {
   const now = new Date();
-
   const year = now.getFullYear();
-
-  const month = String(
-    now.getMonth() + 1
-  ).padStart(2, "0");
-
-  const lastDay = new Date(
-    year,
-    now.getMonth() + 1,
-    0
-  ).getDate();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
 
   return {
     startDate: `${year}-${month}-01`,
-    endDate: `${year}-${month}-${String(
-      lastDay
-    ).padStart(2, "0")}`,
+    endDate: `${year}-${month}-${String(lastDay).padStart(2, "0")}`,
   };
 }
 
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString("id-ID");
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+  const [year, month, day] = value.split("-");
+  return day && month && year ? `${day}/${month}/${year}` : value;
+}
+
+function getStockTypeLabel(type) {
+  const labels = {
+    FINISHED_IN: "Produk Jadi Masuk",
+    CAFE_OUT: "Produk Keluar",
+    CAFE_IN: "Produk Kembali",
+    OPENING_BALANCE: "Saldo Awal",
+    FROZEN_IN: "Frozen Masuk",
+    FROZEN_OUT: "Frozen Keluar",
+  };
+  return labels[type] || type || "-";
+}
+
 export default function Reports() {
-  const defaultRange = useMemo(
-    () => getCurrentMonthRange(),
-    []
-  );
-
-  const [startDate, setStartDate] =
-    useState(defaultRange.startDate);
-
-  const [endDate, setEndDate] =
-    useState(defaultRange.endDate);
-
-  const [report, setReport] =
-    useState(null);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [pageError, setPageError] =
-    useState("");
+  const defaultRange = getCurrentMonthRange();
+  const [startDate, setStartDate] = useState(defaultRange.startDate);
+  const [endDate, setEndDate] = useState(defaultRange.endDate);
+  const [reportType, setReportType] = useState("expense");
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
 
   async function loadReport() {
     if (!startDate || !endDate) {
-      setPageError(
-        "Tanggal mulai dan tanggal akhir wajib diisi."
-      );
+      setPageError("Tanggal mulai dan tanggal akhir wajib diisi.");
       return;
     }
 
     if (startDate > endDate) {
-      setPageError(
-        "Tanggal mulai tidak boleh melewati tanggal akhir."
-      );
+      setPageError("Tanggal mulai tidak boleh melewati tanggal akhir.");
       return;
     }
 
     try {
       setLoading(true);
       setPageError("");
-
-      const data =
-        await getFinancialReport({
-          startDate,
-          endDate,
-        });
-
+      const data = await getFinancialReport({ startDate, endDate });
       setReport(data);
     } catch (error) {
-      console.error(
-        "Gagal memuat laporan:",
-        error
-      );
-
-      setPageError(
-        error.message ||
-          "Laporan gagal dimuat."
-      );
+      console.error("Gagal memuat laporan:", error);
+      setPageError(error.message || "Laporan gagal dimuat.");
     } finally {
       setLoading(false);
     }
   }
 
-  function handleExportExcel() {
-  if (!report) {
-    setPageError(
-      "Tampilkan laporan terlebih dahulu sebelum export Excel."
-    );
-    return;
-  }
-
-  try {
-    setPageError("");
-
-    exportReportToExcel(report);
-  } catch (error) {
-    console.error(
-      "Gagal export Excel:",
-      error
-    );
-
-    setPageError(
-      error.message ||
-      "File Excel gagal dibuat."
-    );
-  }
-}
-
-function handleExportPdf() {
-  if (!report) {
-    setPageError(
-      "Tampilkan laporan terlebih dahulu sebelum export PDF."
-    );
-    return;
-  }
-
-  try {
-    setPageError("");
-
-    exportReportToPdf(report);
-  } catch (error) {
-    console.error(
-      "Gagal export PDF:",
-      error
-    );
-
-    setPageError(
-      error.message ||
-      "File PDF gagal dibuat."
-    );
-  }
-}
-
   useEffect(() => {
-    async function loadInitialReport() {
-      try {
-        setLoading(true);
-        setPageError("");
+    loadReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-        const data =
-          await getFinancialReport({
-            startDate:
-              defaultRange.startDate,
-            endDate:
-              defaultRange.endDate,
-          });
-
-        setReport(data);
-      } catch (error) {
-        console.error(
-          "Gagal memuat laporan awal:",
-          error
-        );
-
-        setPageError(
-          error.message ||
-            "Laporan gagal dimuat."
-        );
-      } finally {
-        setLoading(false);
-      }
+  function handleExport(kind) {
+    if (!report) {
+      setPageError("Tampilkan laporan terlebih dahulu sebelum export.");
+      return;
     }
 
-    loadInitialReport();
-  }, [
-    defaultRange.startDate,
-    defaultRange.endDate,
-  ]);
+    try {
+      setPageError("");
+      if (kind === "excel") exportReportToExcel(report, reportType);
+      else exportReportToPdf(report, reportType);
+    } catch (error) {
+      console.error(`Gagal export ${kind}:`, error);
+      setPageError(error.message || `File ${kind} gagal dibuat.`);
+    }
+  }
+
+  const selectedLabel =
+    REPORT_TYPES.find((item) => item.value === reportType)?.label || "Laporan";
 
   const incomeColumns = [
-    {
-      key: "tanggal",
-      title: "Tanggal",
-    },
-    {
-      key: "asalSetoran",
-      title: "Asal Setoran",
-    },
-    {
-      key: "kodeLot",
-      title: "Kode Lot",
-      render: (item) =>
-        item.kodeLot || "-",
-    },
-    {
-      key: "totalPenjualan",
-      title: "Setoran Diterima",
-      render: (item) => (
-        <Currency
-          value={item.totalPenjualan}
-        />
-      ),
-    },
-    {
-      key: "keterangan",
-      title: "Keterangan",
-    },
+    { key: "tanggal", title: "Tanggal", render: (item) => formatDate(item.tanggal) },
+    { key: "asalSetoran", title: "Asal Setoran" },
+    { key: "totalPenjualan", title: "Jumlah", render: (item) => <Currency value={item.totalPenjualan} /> },
+    { key: "keterangan", title: "Keterangan", render: (item) => item.keterangan || "-" },
   ];
 
   const expenseColumns = [
-    {
-      key: "tanggal",
-      title: "Tanggal",
-    },
-    {
-      key: "kategori",
-      title: "Kategori",
-    },
-    {
-      key: "nominal",
-      title: "Nominal",
-      render: (item) => (
-        <Currency value={item.nominal} />
-      ),
-    },
-    {
-      key: "keterangan",
-      title: "Keterangan",
-    },
-  ];
-
-  const batchColumns = [
-    {
-      key: "tanggal",
-      title: "Tanggal",
-    },
-    {
-      key: "kode",
-      title: "Batch",
-    },
-    {
-      key: "recipe",
-      title: "Recipe",
-    },
-    {
-      key: "target",
-      title: "Target",
-      render: (item) =>
-        `${Number(
-          item.target || 0
-        ).toLocaleString("id-ID")} pcs`,
-    },
-    {
-      key: "selesai",
-      title: "Selesai",
-      render: (item) =>
-        `${Number(
-          item.selesai || 0
-        ).toLocaleString("id-ID")} pcs`,
-    },
-    {
-      key: "reject",
-      title: "Reject",
-      render: (item) =>
-        `${Number(
-          item.reject || 0
-        ).toLocaleString("id-ID")} pcs`,
-    },
-    {
-      key: "status",
-      title: "Status",
-    },
+    { key: "tanggal", title: "Tanggal", render: (item) => formatDate(item.tanggal) },
+    { key: "kategori", title: "Kategori" },
+    { key: "nominal", title: "Jumlah", render: (item) => <Currency value={item.nominal} /> },
+    { key: "keterangan", title: "Keterangan", render: (item) => item.keterangan || "-" },
   ];
 
   const purchaseColumns = [
-  {
-    key: "tanggal",
-    title: "Tanggal",
-  },
-  {
-    key: "supplierNama",
-    title: "Supplier",
-    render: (item) =>
-      item.supplierNama || "-",
-  },
-  {
-    key: "ingredientNama",
-    title: "Bahan Baku",
-    render: (item) =>
-      `${item.ingredientKode} — ${item.ingredientNama}`,
-  },
-  {
-    key: "jumlah",
-    title: "Jumlah",
-    render: (item) =>
-      `${Number(
-        item.jumlah || 0
-      ).toLocaleString("id-ID")} ${
-        item.satuan
-      }`,
-  },
-  {
-    key: "total",
-    title: "Total",
-    render: (item) => (
-      <Currency value={item.total} />
-    ),
-  },
-  {
-    key: "keterangan",
-    title: "Keterangan",
-    render: (item) =>
-      item.keterangan || "-",
-  },
-];
+    { key: "tanggal", title: "Tanggal", render: (item) => formatDate(item.tanggal) },
+    { key: "supplierNama", title: "Supplier", render: (item) => item.supplierNama || "-" },
+    { key: "ingredientNama", title: "Bahan Baku", render: (item) => `${item.ingredientKode || ""} — ${item.ingredientNama || "-"}` },
+    { key: "jumlah", title: "Jumlah", render: (item) => `${formatNumber(item.jumlah)} ${item.satuan || ""}` },
+    { key: "total", title: "Total", render: (item) => <Currency value={item.total} /> },
+    { key: "keterangan", title: "Keterangan", render: (item) => item.keterangan || "-" },
+  ];
 
-  if (loading) {
-  return (
-    <LoadingState message="Memuat laporan..." />
-  );
-}
+  const salesColumns = [
+    { key: "productSku", title: "Kode", render: (item) => item.productSku || "-" },
+    { key: "productName", title: "Produk" },
+    { key: "dineIn", title: "Dine In", render: (item) => formatNumber(item.dineIn) },
+    { key: "takeAway", title: "Take Away", render: (item) => formatNumber(item.takeAway) },
+    { key: "totalQty", title: "Total Qty", render: (item) => formatNumber(item.totalQty) },
+    { key: "totalAmount", title: "Total Penjualan", render: (item) => <Currency value={item.totalAmount} /> },
+  ];
+
+  const stockColumns = [
+    { key: "tanggal", title: "Tanggal", render: (item) => formatDate(item.tanggal) },
+    { key: "productSku", title: "Kode", render: (item) => item.productSku || "-" },
+    { key: "productName", title: "Produk" },
+    { key: "tipe", title: "Pergerakan", render: (item) => getStockTypeLabel(item.tipe) },
+    { key: "jumlah", title: "Qty", render: (item) => `${formatNumber(item.jumlah)} ${item.satuan}` },
+    { key: "lotCode", title: "Lot", render: (item) => item.lotCode || "-" },
+    { key: "keterangan", title: "Keterangan", render: (item) => item.keterangan || "-" },
+  ];
+
+  const productionColumns = [
+    { key: "tanggal", title: "Tanggal", render: (item) => formatDate(item.tanggal) },
+    { key: "kode", title: "Batch" },
+    { key: "recipe", title: "Recipe" },
+    { key: "target", title: "Target", render: (item) => `${formatNumber(item.target)} pcs` },
+    { key: "selesai", title: "Selesai", render: (item) => `${formatNumber(item.selesai)} pcs` },
+    { key: "reject", title: "Reject", render: (item) => `${formatNumber(item.reject)} pcs` },
+    { key: "status", title: "Status" },
+  ];
+
+  if (loading && !report) return <LoadingState message="Memuat laporan..." />;
+
+  let table = null;
+  let totalLabel = "Total";
+  let totalValue = 0;
+
+  if (report) {
+    if (reportType === "income") {
+      table = <DataTable columns={incomeColumns} data={report.incomes} emptyMessage="Tidak ada pemasukan pada periode ini" />;
+      totalLabel = "Total Pemasukan";
+      totalValue = report.summary.totalIncome;
+    } else if (reportType === "expense") {
+      table = <DataTable columns={expenseColumns} data={report.expenses} emptyMessage="Tidak ada pengeluaran pada periode ini" />;
+      totalLabel = "Total Pengeluaran";
+      totalValue = report.summary.totalExpense;
+    } else if (reportType === "purchase") {
+      table = <DataTable columns={purchaseColumns} data={report.purchases} emptyMessage="Tidak ada purchasing pada periode ini" />;
+      totalLabel = "Total Purchasing";
+      totalValue = report.summary.totalPurchase;
+    } else if (reportType === "sales") {
+      table = <DataTable columns={salesColumns} data={report.sales} emptyMessage="Tidak ada penjualan pada periode ini" />;
+      totalLabel = "Total Penjualan";
+      totalValue = report.summary.totalSales;
+    } else if (reportType === "stock") {
+      table = <DataTable columns={stockColumns} data={report.stock} emptyMessage="Tidak ada pergerakan stok pada periode ini" />;
+    } else if (reportType === "production") {
+      table = <DataTable columns={productionColumns} data={report.batches} emptyMessage="Tidak ada produksi pada periode ini" />;
+    }
+  }
 
   return (
     <div>
       <PageTitle
         title="Laporan"
-        subtitle="Rekap mingguan atau bulanan Bunbun Kitchen"
+        subtitle="Tampilkan laporan berdasarkan jenis dan periode tanggal"
       />
 
       {pageError && (
@@ -348,49 +203,43 @@ function handleExportPdf() {
       )}
 
       <Card>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Tanggal Mulai
-            </label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Jenis Laporan</label>
+            <select
+              value={reportType}
+              onChange={(event) => setReportType(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-amber-600"
+            >
+              {REPORT_TYPES.map((item) => (
+                <option key={item.value} value={item.value}>{item.label}</option>
+              ))}
+            </select>
+          </div>
 
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Tanggal Mulai</label>
             <input
               type="date"
               value={startDate}
-              onChange={(event) =>
-                setStartDate(
-                  event.target.value
-                )
-              }
+              onChange={(event) => setStartDate(event.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-amber-600"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Tanggal Akhir
-            </label>
-
+            <label className="mb-2 block text-sm font-medium text-gray-700">Tanggal Akhir</label>
             <input
               type="date"
               value={endDate}
-              onChange={(event) =>
-                setEndDate(
-                  event.target.value
-                )
-              }
+              onChange={(event) => setEndDate(event.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-amber-600"
             />
           </div>
 
           <div className="flex items-end">
-            <Button
-              onClick={loadReport}
-              disabled={loading}
-            >
-              {loading
-                ? "Memuat..."
-                : "Tampilkan Laporan"}
+            <Button onClick={loadReport} disabled={loading} className="w-full">
+              {loading ? "Memuat..." : "Tampilkan Laporan"}
             </Button>
           </div>
         </div>
@@ -398,253 +247,46 @@ function handleExportPdf() {
 
       {report && (
         <>
-          <div className="mt-6 flex flex-wrap justify-end gap-3">
-            <Button onClick={handleExportExcel}>
-                Export Excel
-            </Button>
+          <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">{selectedLabel}</h2>
+              <p className="text-sm text-gray-500">
+                Periode {formatDate(startDate)} — {formatDate(endDate)}
+              </p>
+            </div>
 
-            <Button onClick={handleExportPdf}>
-                Export PDF
-            </Button>
+            <div className="flex gap-3">
+              <Button onClick={() => handleExport("excel")}>Export Excel</Button>
+              <Button onClick={() => handleExport("pdf")}>Export PDF</Button>
+            </div>
           </div>
 
-          <div className="mt-6 grid gap-6 md:grid-cols-3">
-            <Card>
-              <p className="text-sm text-gray-500">
-                Total Pemasukan
-              </p>
+          {(reportType === "income" || reportType === "expense" || reportType === "purchase" || reportType === "sales") && (
+            <Card className="mt-6">
+              <p className="text-sm text-gray-500">{totalLabel}</p>
+              <p className="mt-2 text-2xl font-bold text-gray-900"><Currency value={totalValue} /></p>
+            </Card>
+          )}
 
-              <p className="mt-2 text-2xl font-bold text-green-700">
-                <Currency
-                  value={
-                    report.summary
-                      .totalIncome
-                  }
-                />
+          {reportType === "stock" && (
+            <Card className="mt-6">
+              <p className="text-sm text-gray-500">Jumlah Pergerakan Stok</p>
+              <p className="mt-2 text-2xl font-bold text-gray-900">{formatNumber(report.stock.length)} transaksi</p>
+            </Card>
+          )}
+
+          {reportType === "production" && (
+            <Card className="mt-6">
+              <p className="text-sm text-gray-500">Ringkasan Produksi</p>
+              <p className="mt-2 text-sm text-gray-700">
+                Batch: <strong>{formatNumber(report.summary.totalBatches)}</strong> · Selesai: <strong>{formatNumber(report.summary.totalFinished)} pcs</strong> · Reject: <strong>{formatNumber(report.summary.totalReject)} pcs</strong>
               </p>
             </Card>
+          )}
 
-            <Card>
-              <p className="text-sm text-gray-500">
-                Total Pengeluaran
-              </p>
-
-              <p className="mt-2 text-2xl font-bold text-red-700">
-                <Currency
-                  value={
-                    report.summary
-                      .totalExpense
-                  }
-                />
-              </p>
-            </Card>
-
-            <Card>
-              <p className="text-sm text-gray-500">
-                Saldo Bersih
-              </p>
-
-              <p
-                className={`mt-2 text-2xl font-bold ${
-                  report.summary
-                    .netProfit >= 0
-                    ? "text-amber-700"
-                    : "text-red-700"
-                }`}
-              >
-                <Currency
-                  value={
-                    report.summary
-                      .netProfit
-                  }
-                />
-              </p>
-            </Card>
-          </div>
-
-          <div className="mt-6 grid gap-6 md:grid-cols-3">
-            <Card>
-              <p className="text-sm text-gray-500">
-                Gaji
-              </p>
-
-              <p className="mt-2 text-xl font-bold">
-                <Currency
-                  value={
-                    report.summary
-                      .expenseByCategory
-                      .Gaji
-                  }
-                />
-              </p>
-            </Card>
-
-            <Card>
-              <p className="text-sm text-gray-500">
-                Bahan Baku
-              </p>
-
-              <p className="mt-2 text-xl font-bold">
-                <Currency
-                  value={
-                    report.summary
-                      .expenseByCategory[
-                      "Bahan Baku"
-                    ]
-                  }
-                />
-              </p>
-            </Card>
-
-            <Card>
-              <p className="text-sm text-gray-500">
-                Maintenance
-              </p>
-
-              <p className="mt-2 text-xl font-bold">
-                <Currency
-                  value={
-                    report.summary
-                      .expenseByCategory
-                      .Maintenance
-                  }
-                />
-              </p>
-            </Card>
-          </div>
-
-          <div className="mt-6 grid gap-6 md:grid-cols-4">
-            <Card>
-              <p className="text-sm text-gray-500">
-                Total Batch
-              </p>
-
-              <p className="mt-2 text-xl font-bold">
-                {
-                  report.summary
-                    .totalBatches
-                }
-              </p>
-            </Card>
-
-            <Card>
-              <p className="text-sm text-gray-500">
-                Batch Selesai
-              </p>
-
-              <p className="mt-2 text-xl font-bold">
-                {
-                  report.summary
-                    .finishedBatches
-                }
-              </p>
-            </Card>
-
-            <Card>
-              <p className="text-sm text-gray-500">
-                Produk Selesai
-              </p>
-
-              <p className="mt-2 text-xl font-bold">
-                {Number(
-                  report.summary
-                    .totalFinished || 0
-                ).toLocaleString(
-                  "id-ID"
-                )}{" "}
-                pcs
-              </p>
-            </Card>
-
-            <Card>
-              <p className="text-sm text-gray-500">
-                Reject
-              </p>
-
-              <p className="mt-2 text-xl font-bold">
-                {Number(
-                  report.summary
-                    .totalReject || 0
-                ).toLocaleString(
-                  "id-ID"
-                )}{" "}
-                pcs
-              </p>
-            </Card>
-          </div>
-
-          <div className="mt-6">
-            <Card>
-              <p className="text-sm text-gray-500">
-                Total Pembelian Bahan Baku
-              </p>
-
-              <p className="mt-2 text-2xl font-bold text-amber-700">
-                <Currency
-                  value={
-                    report.summary.totalPurchase
-                  }
-               />
-             </p>
-            </Card>
-          </div>
-
-          <div className="mt-6">
-            <Card>
-              <h2 className="mb-4 text-xl font-semibold">
-                Rincian Pemasukan
-              </h2>
-
-              <DataTable
-                columns={incomeColumns}
-                data={report.incomes}
-                emptyMessage="Tidak ada pemasukan pada periode ini"
-              />
-            </Card>
-          </div>
-
-          <div className="mt-6">
-            <Card>
-              <h2 className="mb-4 text-xl font-semibold">
-                Rincian Pengeluaran
-              </h2>
-
-              <DataTable
-                columns={expenseColumns}
-                data={report.expenses}
-                emptyMessage="Tidak ada pengeluaran pada periode ini"
-              />
-            </Card>
-          </div>
-
-          <div className="mt-6">
-            <Card>
-              <h2 className="mb-4 text-xl font-semibold">
-                Rekap Produksi
-              </h2>
-
-              <DataTable
-                columns={batchColumns}
-                data={report.batches}
-                emptyMessage="Tidak ada produksi pada periode ini"
-              />
-            </Card>
-          </div>
-
-          <div className="mt-6">
-            <Card>
-              <h2 className="mb-4 text-xl font-semibold">
-                Rekap Pembelian
-              </h2>
-
-              <DataTable
-                columns={purchaseColumns}
-                data={report.purchases}
-              emptyMessage="Tidak ada pembelian pada periode ini"
-              />
-            </Card>
-          </div>
-          
+          <Card className="mt-6">
+            {table}
+          </Card>
         </>
       )}
     </div>
