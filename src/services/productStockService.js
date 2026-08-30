@@ -74,13 +74,10 @@ export async function invokeFrozenFlowRpc(
 ) {
   const key = operationKey || createProductStockOperationKey();
 
-  const { data, error } = await supabase.rpc(
-    functionName,
-    {
-      ...params,
-      p_operation_key: key,
-    }
-  );
+  const { data, error } = await supabase.rpc(functionName, {
+    ...params,
+    p_operation_key: key,
+  });
 
   if (error) {
     throwProductStockError(error);
@@ -100,7 +97,9 @@ function mapSplit(row) {
     productSku: row.products?.sku ?? "",
     productNama: row.products?.nama ?? "",
     sourceSplitId: row.source_split_id,
-    sourceLotCode: row.source_split?.lot_code ?? (row.source_split_id ? row.lot_code ?? "" : ""),
+    sourceLotCode:
+      row.source_split?.lot_code ??
+      (row.source_split_id ? row.lot_code ?? "" : ""),
     route: row.route,
     lotCode: row.lot_code ?? "",
     qty: Number(row.qty || 0),
@@ -126,13 +125,12 @@ function mapMovement(row) {
     satuan: row.unit,
     keterangan: row.notes ?? "",
     operationKey: row.operation_key,
+    saleId: row.sale_id,
     createdAt: row.created_at,
   };
 }
 
-export async function getProductionBatchSplits(
-  productionBatchId
-) {
+export async function getProductionBatchSplits(productionBatchId) {
   const { data, error } = await supabase
     .from(SPLIT_TABLE)
     .select(`
@@ -144,9 +142,7 @@ export async function getProductionBatchSplits(
     `)
     .eq("production_batch_id", productionBatchId)
     .eq("is_deleted", false)
-    .order("created_at", {
-      ascending: true,
-    });
+    .order("created_at", { ascending: true });
 
   if (error) {
     throwProductStockError(error);
@@ -196,12 +192,8 @@ export async function getProductStockMovements({
       )
     `)
     .eq("is_deleted", false)
-    .order("movement_date", {
-      ascending: false,
-    })
-    .order("created_at", {
-      ascending: false,
-    });
+    .order("movement_date", { ascending: false })
+    .order("created_at", { ascending: false });
 
   if (productId) {
     query = query.eq("product_id", productId);
@@ -269,7 +261,6 @@ export async function getFrozenStockByProductAndLot() {
 
 export async function getAvailableFrozenLots() {
   const lots = await getFrozenStockByProductAndLot();
-
   return lots.filter((lot) => lot.saldo > 0);
 }
 
@@ -278,6 +269,7 @@ export async function getFinishedProductBalances() {
     movementTypes: [
       "FINISHED_IN",
       "CAFE_OUT",
+      "CAFE_IN",
       "OPENING_BALANCE",
     ],
   });
@@ -296,7 +288,8 @@ export async function getFinishedProductBalances() {
 
     if (
       movement.tipe === "FINISHED_IN" ||
-      movement.tipe === "OPENING_BALANCE"
+      movement.tipe === "OPENING_BALANCE" ||
+      movement.tipe === "CAFE_IN"
     ) {
       current.masuk += movement.jumlah;
     }
