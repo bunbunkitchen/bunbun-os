@@ -61,7 +61,7 @@ export default function ProductStock() {
       await releaseFrozenStockForProofing({
         frozenSplitId: releaseLot.lotId,
         qty: values.qty,
-        movementDate: getLocalDate(),
+        movementDate: values.movementDate || getLocalDate(),
         operationKey: values.operationKey,
       });
       await loadData();
@@ -80,7 +80,7 @@ export default function ProductStock() {
         directSplitId: bakingSplit.id,
         bakedGoodQty: values.goodQty,
         bakedRejectQty: values.rejectQty,
-        movementDate: getLocalDate(),
+        movementDate: values.movementDate || getLocalDate(),
         operationKey: values.operationKey,
       });
       await loadData();
@@ -101,7 +101,7 @@ export default function ProductStock() {
       await recordCafeDeposit({
         productId: finishedRelease.productId,
         qty: values.qty,
-        movementDate: getLocalDate(),
+        movementDate: values.movementDate || getLocalDate(),
         notes: noteParts.join(" · "),
         operationKey: values.operationKey,
       });
