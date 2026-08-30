@@ -15,7 +15,7 @@ import {
   getFinishedProductBalances,
   getFrozenProcessingSplits,
   getProductStockErrorMessage,
-  recordCafeDeposit,
+  recordMultiProductRelease,
 } from "../../services/productStockService";
 import {
   recordBakingResult,
@@ -35,7 +35,7 @@ export default function ProductStock() {
   const [finishedBalances, setFinishedBalances] = useState([]);
   const [releaseLot, setReleaseLot] = useState(null);
   const [bakingSplit, setBakingSplit] = useState(null);
-  const [finishedRelease, setFinishedRelease] = useState(null);
+  const [showFinishedRelease, setShowFinishedRelease] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState("");
 
@@ -95,19 +95,16 @@ export default function ProductStock() {
 
   async function handleFinishedRelease(values) {
     try {
-      const noteParts = [`Tujuan: ${values.destination}`];
-      if (values.notes) noteParts.push(values.notes);
-
-      await recordCafeDeposit({
-        productId: finishedRelease.productId,
-        qty: values.qty,
+      await recordMultiProductRelease({
         movementDate: values.movementDate || getLocalDate(),
-        notes: noteParts.join(" · "),
+        destination: values.destination,
+        notes: values.notes,
+        items: values.items,
         operationKey: values.operationKey,
       });
       await loadData();
-      setFinishedRelease(null);
-      toast.success("Pengeluaran produk tersimpan dan stok produk jadi berkurang.");
+      setShowFinishedRelease(false);
+      toast.success(`${values.items.length} jenis produk berhasil dikeluarkan.`);
     } catch (error) {
       const message = getProductStockErrorMessage(error);
       setPageError(message);
@@ -178,25 +175,32 @@ export default function ProductStock() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-xl font-bold text-gray-900">Stok Produk Jadi</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Stok Produk Jadi</h2>
+            <p className="mt-1 text-sm text-gray-500">Saldo total setiap jenis produk yang tersedia.</p>
+          </div>
+          <Button onClick={() => setShowFinishedRelease(true)} disabled={!finishedBalances.length}>
+            Keluarkan Produk
+          </Button>
+        </div>
+
         {!finishedBalances.length ? (
           <Card><p className="py-6 text-center text-gray-500">Belum ada stok produk jadi.</p></Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {finishedBalances.map((item) => (
-              <Card key={item.productId}>
-                <p className="text-sm text-gray-500">{item.productSku || "Produk"}</p>
-                <h3 className="mt-1 text-lg font-bold text-gray-900">{item.productNama}</h3>
-                <div className="mt-5 flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Tersedia</p>
-                    <p className="text-2xl font-bold text-green-700">{item.saldo} pcs</p>
+          <Card>
+            <div className="divide-y divide-gray-100">
+              {finishedBalances.map((item) => (
+                <div key={item.productId} className="flex items-center justify-between gap-4 py-4 first:pt-1 last:pb-1">
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500">{item.productSku || "Produk"}</p>
+                    <p className="font-semibold text-gray-900">{item.productNama}</p>
                   </div>
-                  <Button onClick={() => setFinishedRelease(item)}>Keluarkan Produk</Button>
+                  <p className="shrink-0 text-lg font-bold text-green-700">{item.saldo} pcs</p>
                 </div>
-              </Card>
-            ))}
-          </div>
+              ))}
+            </div>
+          </Card>
         )}
       </section>
 
@@ -206,14 +210,12 @@ export default function ProductStock() {
       <Modal open={Boolean(bakingSplit)} onClose={() => setBakingSplit(null)}>
         {bakingSplit && <ProductionResultForm split={bakingSplit} onSave={handleBaking} onCancel={() => setBakingSplit(null)} />}
       </Modal>
-      <Modal open={Boolean(finishedRelease)} onClose={() => setFinishedRelease(null)}>
-        {finishedRelease && (
-          <FinishedProductReleaseForm
-            item={finishedRelease}
-            onSave={handleFinishedRelease}
-            onCancel={() => setFinishedRelease(null)}
-          />
-        )}
+      <Modal open={showFinishedRelease} onClose={() => setShowFinishedRelease(false)}>
+        <FinishedProductReleaseForm
+          products={finishedBalances}
+          onSave={handleFinishedRelease}
+          onCancel={() => setShowFinishedRelease(false)}
+        />
       </Modal>
     </div>
   );
