@@ -5,10 +5,10 @@ import Button from "../ui/Button";
 import Input from "../ui/Input";
 
 const DESTINATIONS = [
-  "Sewangi Cafe",
+  "The Public Coffee",
   "Penjualan Event",
   "Pesanan Langsung",
-  "Sampel / Complimentary",
+  "Sampel/Complimentary",
   "Penyesuaian Stok",
   "Lainnya",
 ];
@@ -31,7 +31,8 @@ function formatDisplayDate(value) {
 export default function FinishedProductReleaseForm({ item, onSave, onCancel }) {
   const [qty, setQty] = useState("");
   const [movementDate, setMovementDate] = useState(getLocalDate());
-  const [destination, setDestination] = useState("Sewangi Cafe");
+  const [destination, setDestination] = useState("The Public Coffee");
+  const [otherDestination, setOtherDestination] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -40,6 +41,8 @@ export default function FinishedProductReleaseForm({ item, onSave, onCancel }) {
   async function handleSubmit(event) {
     event.preventDefault();
     const quantity = Number(qty);
+    const finalDestination =
+      destination === "Lainnya" ? otherDestination.trim() : destination;
 
     if (!movementDate) {
       setError("Tanggal pengeluaran wajib diisi.");
@@ -56,6 +59,11 @@ export default function FinishedProductReleaseForm({ item, onSave, onCancel }) {
       return;
     }
 
+    if (destination === "Lainnya" && !finalDestination) {
+      setError("Nama kafe atau keperluan wajib diisi.");
+      return;
+    }
+
     if (destination === "Penyesuaian Stok" && !notes.trim()) {
       setError("Untuk penyesuaian stok, catatan wajib diisi.");
       return;
@@ -68,7 +76,7 @@ export default function FinishedProductReleaseForm({ item, onSave, onCancel }) {
       await onSave({
         qty: quantity,
         movementDate,
-        destination,
+        destination: finalDestination,
         notes: notes.trim(),
         operationKey: operationKeyRef.current,
       });
@@ -137,6 +145,22 @@ export default function FinishedProductReleaseForm({ item, onSave, onCancel }) {
           ))}
         </select>
       </label>
+
+      {destination === "Lainnya" && (
+        <label className="block space-y-1 text-sm font-medium text-gray-700">
+          <span>Nama Kafe / Keperluan Lainnya</span>
+          <Input
+            type="text"
+            value={otherDestination}
+            disabled={isSaving}
+            placeholder="Contoh: Kafe XYZ"
+            onChange={(event) => {
+              setOtherDestination(event.target.value);
+              setError("");
+            }}
+          />
+        </label>
+      )}
 
       <label className="block space-y-1 text-sm font-medium text-gray-700">
         <span>Catatan {destination === "Penyesuaian Stok" ? "(wajib)" : "(opsional)"}</span>
