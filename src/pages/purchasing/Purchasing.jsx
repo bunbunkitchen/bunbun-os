@@ -8,6 +8,7 @@ import MasterPage from "../../components/ui/MasterPage";
 import Currency from "../../components/ui/Currency";
 import LoadingState from "../../components/ui/LoadingState";
 import PurchaseForm from "../../components/forms/PurchaseForm";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   createPurchase,
@@ -17,6 +18,9 @@ import {
 } from "../../services/purchaseService";
 
 export default function Purchasing() {
+  const { role } = useAuth();
+  const isOwner = role === "owner";
+
   const [purchases, setPurchases] =
     useState([]);
 
@@ -33,18 +37,18 @@ export default function Purchasing() {
 
         const data = await getAllPurchases();
 
-const maintenancePurchases = data.filter(
-  (item) => item.purchaseType === "MAINTENANCE"
-);
+        const maintenancePurchases = data.filter(
+          (item) => item.purchaseType === "MAINTENANCE"
+        );
 
-console.log(
-  "MAINTENANCE DETAIL JSON:",
-  JSON.stringify(
-    maintenancePurchases,
-    null,
-    2
-  )
-);
+        console.log(
+          "MAINTENANCE DETAIL JSON:",
+          JSON.stringify(
+            maintenancePurchases,
+            null,
+            2
+          )
+        );
 
         setPurchases(data);
       } catch (error) {
@@ -192,17 +196,19 @@ console.log(
         </div>
       )}
 
-      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
-        <p className="text-sm font-medium text-amber-800">
-          Total Pembelian
-        </p>
+      {isOwner && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+          <p className="text-sm font-medium text-amber-800">
+            Total Pembelian
+          </p>
 
-        <p className="mt-2 text-3xl font-bold text-amber-700">
-          <Currency
-            value={totalPembelian}
-          />
-        </p>
-      </div>
+          <p className="mt-2 text-3xl font-bold text-amber-700">
+            <Currency
+              value={totalPembelian}
+            />
+          </p>
+        </div>
+      )}
 
       <MasterPage
         title="Purchasing"
