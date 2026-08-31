@@ -1,8 +1,17 @@
 -- BUNBUN OS
 -- Migration 031: multi-product manual finished-stock release
 -- One manual release can contain multiple finished products and is atomic.
--- product_stock_movements.operation_key is UNIQUE, so each movement receives
--- its own key. The first movement uses the caller's key for idempotency.
+-- operation_key identifies the whole release transaction, so multiple movement
+-- rows in the same release intentionally share the same key.
+
+-- The old constraint treated operation_key as unique per movement row. For a
+-- multi-product release that is incorrect: one release creates several rows.
+alter table public.product_stock_movements
+drop constraint if exists product_stock_movements_operation_key_unique;
+
+drop index if exists public.product_stock_movements_operation_key_idx;
+create index if not exists product_stock_movements_operation_key_idx
+  on public.product_stock_movements (operation_key);
 
 create or replace function public.record_multi_product_release(
   p_movement_date date,
@@ -25,7 +34,6 @@ declare
   v_product public.products%rowtype;
   v_final_notes text;
   v_count integer := 0;
-  v_item_operation_key uuid;
 begin
   v_user_id := public.assert_frozen_flow_operator();
 
@@ -45,12 +53,13 @@ begin
     raise exception 'Minimal harus ada satu produk yang dikeluarkan.';
   end if;
 
-  -- The caller's key represents the complete submission. If it has already
-  -- been used, reject the submission as a duplicate before doing anything.
+  -- The same operation key represents one complete release. If it was already
+  -- written, reject the retry before creating any additional movement rows.
   if exists (
     select 1
     from public.product_stock_movements m
     where m.operation_key = p_operation_key
+      and m.is_deleted = false
   ) then
     raise exception 'Permintaan ini sudah pernah dicatat.' using errcode = '23505';
   end if;
@@ -60,8 +69,7 @@ begin
     ''
   );
 
-  -- Lock all products first so the complete multi-item release is validated
-  -- against a stable stock state before any movement is inserted.
+  -- Validate every product and its stock before inserting any movement.
   for v_item in select value from jsonb_array_elements(p_items)
   loop
     v_product_id := nullif(v_item->>'productId', '')::bigint;
@@ -107,18 +115,11 @@ begin
   end loop;
 
   -- All validation succeeded; PostgreSQL transaction semantics make the
-  -- complete release atomic. Each movement gets a unique operation_key
-  -- because product_stock_movements has a UNIQUE constraint on that column.
+  -- complete release atomic. Multiple rows intentionally share one key.
   for v_item in select value from jsonb_array_elements(p_items)
   loop
     v_product_id := (v_item->>'productId')::bigint;
     v_qty := (v_item->>'quantity')::numeric::integer;
-
-    if v_count = 1 then
-      v_item_operation_key := p_operation_key;
-    else
-      v_item_operation_key := gen_random_uuid();
-    end if;
 
     insert into public.product_stock_movements (
       movement_date,
@@ -136,17 +137,15 @@ begin
       v_product_id,
       v_qty,
       'pcs',
-      v_item_operation_key,
+      p_operation_key,
       v_final_notes,
       v_user_id,
       v_user_id
     );
-
-    v_count := v_count - 1;
   end loop;
 
   return jsonb_build_object(
-    'items_count', jsonb_array_length(p_items),
+    'items_count', v_count,
     'movement_date', p_movement_date,
     'destination', p_destination
   );
