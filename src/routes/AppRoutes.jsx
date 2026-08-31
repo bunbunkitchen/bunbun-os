@@ -66,7 +66,7 @@ export default function AppRoutes() {
           <Route path="sales" element={<RoleRoute allowedRoles={["owner", "baker"]}><Sales /></RoleRoute>} />
 
           <Route path="finance/expense" element={<RoleRoute allowedRoles={["owner"]}><Expense /></RoleRoute>} />
-          <Route path="reports" element={<RoleRoute allowedRoles={["owner"]}><Reports /></RoleRoute>} />
+          <Route path="reports" element={<RoleRoute allowedRoles={["owner", "baker"]}><Reports /></RoleRoute>} />
           <Route path="settings" element={<RoleRoute allowedRoles={["owner"]}><Settings /></RoleRoute>} />
           <Route path="settings/go-live" element={<RoleRoute allowedRoles={["owner"]}><GoLiveChecklist /></RoleRoute>} />
         </Route>
