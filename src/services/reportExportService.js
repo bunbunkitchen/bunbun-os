@@ -19,6 +19,7 @@ function formatDate(dateString) {
 }
 function formatFilenameDate(dateString) { return String(dateString || "").replaceAll("-", ""); }
 function formatRupiah(value) { return `Rp${Number(value || 0).toLocaleString("id-ID")}`; }
+function formatNumber(value) { return Number(value || 0).toLocaleString("id-ID"); }
 function stockTypeLabel(type) {
   const labels = { FINISHED_IN: "Produk Jadi Masuk", CAFE_OUT: "Produk Keluar", CAFE_IN: "Produk Kembali", OPENING_BALANCE: "Saldo Awal", FROZEN_IN: "Frozen Masuk", FROZEN_OUT: "Frozen Keluar" };
   return labels[type] || type || "-";
@@ -40,6 +41,9 @@ function getTotal(report, type) {
   if (type === "sales") return report.summary.totalSales;
   if (type === "product_out") return report.summary.totalProductOut;
   return null;
+}
+function isCurrencyReport(type) {
+  return ["income", "expense", "purchase", "sales"].includes(type);
 }
 
 export function exportReportToExcel(report, type) {
@@ -66,9 +70,14 @@ export function exportReportToPdf(report, type) {
   document.setFontSize(13); document.text(label, 14, 23);
   document.setFontSize(9); document.text(`Periode: ${formatDate(report.period.startDate)} s.d. ${formatDate(report.period.endDate)}`, 14, 29);
   const headers = Object.keys(rows[0] || { Keterangan: "Tidak ada data" });
-  const body = rows.length ? rows.map((row) => headers.map((header) => { const value = row[header]; return ["Jumlah", "Total", "Total Penjualan"].includes(header) ? formatRupiah(value) : value ?? "-"; })) : [["Tidak ada data pada periode ini"]];
+  const currencyHeaders = ["Jumlah", "Total", "Total Penjualan"];
+  const body = rows.length ? rows.map((row) => headers.map((header) => { const value = row[header]; return currencyHeaders.includes(header) && isCurrencyReport(type) ? formatRupiah(value) : value ?? "-"; })) : [["Tidak ada data pada periode ini"]];
   autoTable(document, { startY: 35, head: [headers], body, theme: "grid", styles: { fontSize: 7, overflow: "linebreak" }, headStyles: { fontSize: 7 } });
   const total = getTotal(report, type);
-  if (total !== null) { document.setFontSize(10); document.text(`Total ${label}: ${formatRupiah(total)}`, 14, document.lastAutoTable.finalY + 8); }
+  if (total !== null) {
+    document.setFontSize(10);
+    const totalText = isCurrencyReport(type) ? formatRupiah(total) : `${formatNumber(total)} pcs`;
+    document.text(`Total ${label}: ${totalText}`, 14, document.lastAutoTable.finalY + 8);
+  }
   document.save(`Laporan-${label.replaceAll(" ", "-")}-${formatFilenameDate(report.period.startDate)}-${formatFilenameDate(report.period.endDate)}.pdf`);
 }
