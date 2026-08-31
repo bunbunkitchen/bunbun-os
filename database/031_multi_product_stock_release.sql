@@ -1,6 +1,8 @@
 -- BUNBUN OS
 -- Migration 031: multi-product manual finished-stock release
 -- One manual release can contain multiple finished products and is atomic.
+-- product_stock_movements.operation_key is UNIQUE, so each movement receives
+-- its own key. The first movement uses the caller's key for idempotency.
 
 create or replace function public.record_multi_product_release(
   p_movement_date date,
@@ -23,6 +25,7 @@ declare
   v_product public.products%rowtype;
   v_final_notes text;
   v_count integer := 0;
+  v_item_operation_key uuid;
 begin
   v_user_id := public.assert_frozen_flow_operator();
 
@@ -42,6 +45,8 @@ begin
     raise exception 'Minimal harus ada satu produk yang dikeluarkan.';
   end if;
 
+  -- The caller's key represents the complete submission. If it has already
+  -- been used, reject the submission as a duplicate before doing anything.
   if exists (
     select 1
     from public.product_stock_movements m
@@ -102,11 +107,18 @@ begin
   end loop;
 
   -- All validation succeeded; PostgreSQL transaction semantics make the
-  -- complete release atomic.
+  -- complete release atomic. Each movement gets a unique operation_key
+  -- because product_stock_movements has a UNIQUE constraint on that column.
   for v_item in select value from jsonb_array_elements(p_items)
   loop
     v_product_id := (v_item->>'productId')::bigint;
     v_qty := (v_item->>'quantity')::numeric::integer;
+
+    if v_count = 1 then
+      v_item_operation_key := p_operation_key;
+    else
+      v_item_operation_key := gen_random_uuid();
+    end if;
 
     insert into public.product_stock_movements (
       movement_date,
@@ -124,15 +136,17 @@ begin
       v_product_id,
       v_qty,
       'pcs',
-      p_operation_key,
+      v_item_operation_key,
       v_final_notes,
       v_user_id,
       v_user_id
     );
+
+    v_count := v_count - 1;
   end loop;
 
   return jsonb_build_object(
-    'items_count', v_count,
+    'items_count', jsonb_array_length(p_items),
     'movement_date', p_movement_date,
     'destination', p_destination
   );
