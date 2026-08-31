@@ -128,6 +128,8 @@ export default function Reports() {
     else if (reportType === "production") table = <DataTable columns={productionColumns} data={report.batches} emptyMessage="Tidak ada produksi pada periode ini" />;
   }
 
+  const isCurrencyTotal = ["income", "expense", "purchase", "sales"].includes(reportType);
+
   return <div>
     <PageTitle title="Laporan" subtitle="Tampilkan laporan berdasarkan jenis dan periode tanggal" />
     {pageError && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{pageError}</div>}
@@ -139,7 +141,7 @@ export default function Reports() {
     </div></Card>
     {report && <>
       <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div><h2 className="text-xl font-bold text-gray-900">{selectedLabel}</h2><p className="text-sm text-gray-500">Periode {formatDate(startDate)} — {formatDate(endDate)}</p></div><div className="flex gap-3"><Button onClick={() => handleExport("excel")}>Export Excel</Button><Button onClick={() => handleExport("pdf")}>Export PDF</Button></div></div>
-      {(reportType === "income" || reportType === "expense" || reportType === "purchase" || reportType === "sales" || reportType === "product_out") && <Card className="mt-6"><p className="text-sm text-gray-500">{totalLabel}</p><p className="mt-2 text-2xl font-bold text-gray-900"><Currency value={totalValue} /></p></Card>}
+      {(reportType === "income" || reportType === "expense" || reportType === "purchase" || reportType === "sales" || reportType === "product_out") && <Card className="mt-6"><p className="text-sm text-gray-500">{totalLabel}</p><p className="mt-2 text-2xl font-bold text-gray-900">{isCurrencyTotal ? <Currency value={totalValue} /> : `${formatNumber(totalValue)} pcs`}</p></Card>}
       {reportType === "stock" && <Card className="mt-6"><p className="text-sm text-gray-500">Jumlah Pergerakan Stok</p><p className="mt-2 text-2xl font-bold text-gray-900">{formatNumber(report.stock.length)} transaksi</p></Card>}
       {reportType === "production" && <Card className="mt-6"><p className="text-sm text-gray-500">Ringkasan Produksi</p><p className="mt-2 text-sm text-gray-700">Batch: <strong>{formatNumber(report.summary.totalBatches)}</strong> · Selesai: <strong>{formatNumber(report.summary.totalFinished)} pcs</strong> · Reject: <strong>{formatNumber(report.summary.totalReject)} pcs</strong></p></Card>}
       <Card className="mt-6">{table}</Card>
