@@ -106,7 +106,7 @@ const menus = [
     name: "Laporan",
     path: "/reports",
     icon: <MdAssessment />,
-    roles: ["owner"],
+    roles: ["owner", "baker"],
   },
   {
     name: "Purchasing",
