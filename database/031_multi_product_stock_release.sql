@@ -124,7 +124,7 @@ begin
       v_product_id,
       v_qty,
       'pcs',
-      gen_random_uuid(),
+      p_operation_key,
       v_final_notes,
       v_user_id,
       v_user_id
