@@ -142,22 +142,44 @@ export default function ProductStock() {
         ) : (
           <Card>
             <div className="divide-y divide-gray-100">
-              {frozenBalances.map((item) => (
-                <div key={item.productId} className="flex items-center justify-between gap-4 py-4 first:pt-1 last:pb-1">
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-500">{item.productSku || "Produk"}</p>
-                    <p className="font-semibold text-gray-900">{item.productNama}</p>
+              {frozenBalances.map((item) => {
+                const lotsForProduct = frozenLots.filter((lot) => lot.productId === item.productId);
+                return (
+                  <div key={item.productId} className="py-4 first:pt-1 last:pb-1">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-500">{item.productSku || "Produk"}</p>
+                        <p className="font-semibold text-gray-900">{item.productNama}</p>
+                      </div>
+                      <p className="shrink-0 text-lg font-bold text-amber-700">{item.saldo} pcs</p>
+                    </div>
+
+                    {lotsForProduct.length > 0 && (
+                      <div className="mt-3 space-y-2 pl-0">
+                        {lotsForProduct.map((lot) => (
+                          <div key={lot.lotId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-amber-50 px-3 py-2">
+                            <div>
+                              <p className="text-xs text-gray-500">Lot</p>
+                              <p className="font-medium text-gray-800">{lot.lotCode}</p>
+                              <p className="text-xs text-gray-500">Saldo {lot.saldo} pcs</p>
+                            </div>
+                            <Button onClick={() => setReleaseLot(lot)}>
+                              Keluarkan Frozen
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <p className="shrink-0 text-lg font-bold text-amber-700">{item.saldo} pcs</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
         )}
 
         {frozenLots.length > 0 && (
           <div className="mt-4 flex justify-end">
-            <p className="text-xs text-gray-500">Pengeluaran frozen tetap dilakukan berdasarkan lot untuk menjaga traceability.</p>
+            <p className="text-xs text-gray-500">Pengeluaran frozen dilakukan berdasarkan lot untuk menjaga traceability.</p>
           </div>
         )}
       </section>
