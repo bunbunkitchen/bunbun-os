@@ -146,52 +146,37 @@ export async function getAvailableFrozenLots() {
 }
 
 export async function getFinishedProductBalances() {
-  const { data: products, error: productsError } = await supabase
-    .from("products")
-    .select("id, sku, nama")
-    .eq("is_active", true)
-    .order("nama", { ascending: true });
+  const movements = await getProductStockMovements({
+    movementTypes: ["FINISHED_IN", "CAFE_OUT", "CAFE_IN", "OPENING_BALANCE"],
+  });
 
-  if (productsError) throwProductStockError(productsError);
+  const balances = new Map();
 
-  const balances = await Promise.all(
-    (products ?? []).map(async (product) => {
-      const { data: movements, error } = await supabase
-        .from(MOVEMENT_TABLE)
-        .select("movement_type, qty")
-        .eq("product_id", product.id)
-        .eq("is_deleted", false)
-        .in("movement_type", ["FINISHED_IN", "CAFE_OUT", "CAFE_IN", "OPENING_BALANCE"]);
+  movements.forEach((movement) => {
+    const current = balances.get(movement.productId) || {
+      productId: movement.productId,
+      productSku: movement.productSku,
+      productNama: movement.productNama,
+      masuk: 0,
+      keluar: 0,
+      saldo: 0,
+    };
 
-      if (error) throwProductStockError(error);
+    if (["FINISHED_IN", "OPENING_BALANCE", "CAFE_IN"].includes(movement.tipe)) {
+      current.masuk += movement.jumlah;
+    }
+    if (movement.tipe === "CAFE_OUT") {
+      current.keluar += movement.jumlah;
+    }
 
-      let masuk = 0;
-      let keluar = 0;
+    current.saldo = current.masuk - current.keluar;
+    balances.set(movement.productId, current);
+  });
 
-      for (const movement of movements ?? []) {
-        const qty = Number(movement.qty || 0);
-        if (["FINISHED_IN", "OPENING_BALANCE", "CAFE_IN"].includes(movement.movement_type)) {
-          masuk += qty;
-        }
-        if (movement.movement_type === "CAFE_OUT") {
-          keluar += qty;
-        }
-      }
-
-      return {
-        productId: product.id,
-        productSku: product.sku ?? "",
-        productNama: product.nama ?? "",
-        masuk,
-        keluar,
-        saldo: masuk - keluar,
-      };
-    })
-  );
-
-  return balances.filter((item) => item.saldo > 0);
+  return Array.from(balances.values())
+    .filter((item) => item.saldo > 0)
+    .sort((a, b) => a.productNama.localeCompare(b.productNama, "id"));
 }
-
 export async function recordCafeDeposit({ productId, qty, movementDate, notes, operationKey }) {
   return invokeFrozenFlowRpc("record_cafe_deposit", { p_product_id: Number(productId), p_qty: Number(qty), p_movement_date: movementDate, p_notes: notes || null }, operationKey);
 }
