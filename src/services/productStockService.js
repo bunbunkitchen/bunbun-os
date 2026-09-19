@@ -146,16 +146,17 @@ export async function getAvailableFrozenLots() {
 }
 
 export async function getFinishedProductBalances() {
-  const movements = await getProductStockMovements({ movementTypes: ["FINISHED_IN", "CAFE_OUT", "CAFE_IN", "OPENING_BALANCE"] });
-  const products = new Map();
-  movements.forEach((movement) => {
-    const current = products.get(movement.productId) || { productId: movement.productId, productSku: movement.productSku, productNama: movement.productNama, masuk: 0, keluar: 0, saldo: 0 };
-    if (["FINISHED_IN", "OPENING_BALANCE", "CAFE_IN"].includes(movement.tipe)) current.masuk += movement.jumlah;
-    if (movement.tipe === "CAFE_OUT") current.keluar += movement.jumlah;
-    current.saldo = current.masuk - current.keluar;
-    products.set(movement.productId, current);
-  });
-  // Stok produk jadi yang ditampilkan harus benar-benar tersedia.\n  // Saldo dihitung dari movement: FINISHED_IN + OPENING_BALANCE + CAFE_IN - CAFE_OUT.\n  // Jangan tampilkan saldo nol/negatif di UI; data movement historis tetap utuh di database.\n  return Array.from(products.values())\n    .filter((item) => item.saldo > 0)\n    .sort((a, b) => a.productNama.localeCompare(b.productNama, "id"));
+  const { data, error } = await supabase.rpc("get_finished_product_balances");
+  if (error) throwProductStockError(error);
+
+  return (data ?? []).map((item) => ({
+    productId: item.product_id,
+    productSku: item.product_sku ?? "",
+    productNama: item.product_nama ?? "",
+    masuk: Number(item.masuk || 0),
+    keluar: Number(item.keluar || 0),
+    saldo: Number(item.saldo || 0),
+  }));
 }
 
 export async function recordCafeDeposit({ productId, qty, movementDate, notes, operationKey }) {
