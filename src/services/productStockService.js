@@ -146,36 +146,19 @@ export async function getAvailableFrozenLots() {
 }
 
 export async function getFinishedProductBalances() {
-  const movements = await getProductStockMovements({
-    movementTypes: ["FINISHED_IN", "CAFE_OUT", "CAFE_IN", "OPENING_BALANCE"],
-  });
+  const { data, error } = await supabase.rpc("get_finished_product_balances");
+  if (error) throwProductStockError(error);
 
-  const balances = new Map();
-
-  movements.forEach((movement) => {
-    const current = balances.get(movement.productId) || {
-      productId: movement.productId,
-      productSku: movement.productSku,
-      productNama: movement.productNama,
-      masuk: 0,
-      keluar: 0,
-      saldo: 0,
-    };
-
-    if (["FINISHED_IN", "OPENING_BALANCE", "CAFE_IN"].includes(movement.tipe)) {
-      current.masuk += movement.jumlah;
-    }
-    if (movement.tipe === "CAFE_OUT") {
-      current.keluar += movement.jumlah;
-    }
-
-    current.saldo = current.masuk - current.keluar;
-    balances.set(movement.productId, current);
-  });
-
-  return Array.from(balances.values())
-    .filter((item) => item.saldo > 0)
-    .sort((a, b) => a.productNama.localeCompare(b.productNama, "id"));
+  return (data ?? [])
+    .map((item) => ({
+      productId: item.product_id,
+      productSku: item.product_sku ?? "",
+      productNama: item.product_nama ?? "",
+      masuk: Number(item.masuk || 0),
+      keluar: Number(item.keluar || 0),
+      saldo: Number(item.saldo || 0),
+    }))
+    .filter((item) => item.saldo > 0);
 }
 export async function recordCafeDeposit({ productId, qty, movementDate, notes, operationKey }) {
   return invokeFrozenFlowRpc("record_cafe_deposit", { p_product_id: Number(productId), p_qty: Number(qty), p_movement_date: movementDate, p_notes: notes || null }, operationKey);
