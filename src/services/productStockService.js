@@ -146,17 +146,50 @@ export async function getAvailableFrozenLots() {
 }
 
 export async function getFinishedProductBalances() {
-  const { data, error } = await supabase.rpc("get_finished_product_balances");
-  if (error) throwProductStockError(error);
+  const { data: products, error: productsError } = await supabase
+    .from("products")
+    .select("id, sku, nama")
+    .eq("is_active", true)
+    .order("nama", { ascending: true });
 
-  return (data ?? []).map((item) => ({
-    productId: item.product_id,
-    productSku: item.product_sku ?? "",
-    productNama: item.product_nama ?? "",
-    masuk: Number(item.masuk || 0),
-    keluar: Number(item.keluar || 0),
-    saldo: Number(item.saldo || 0),
-  }));
+  if (productsError) throwProductStockError(productsError);
+
+  const balances = await Promise.all(
+    (products ?? []).map(async (product) => {
+      const { data: movements, error } = await supabase
+        .from(MOVEMENT_TABLE)
+        .select("movement_type, qty")
+        .eq("product_id", product.id)
+        .eq("is_deleted", false)
+        .in("movement_type", ["FINISHED_IN", "CAFE_OUT", "CAFE_IN", "OPENING_BALANCE"]);
+
+      if (error) throwProductStockError(error);
+
+      let masuk = 0;
+      let keluar = 0;
+
+      for (const movement of movements ?? []) {
+        const qty = Number(movement.qty || 0);
+        if (["FINISHED_IN", "OPENING_BALANCE", "CAFE_IN"].includes(movement.movement_type)) {
+          masuk += qty;
+        }
+        if (movement.movement_type === "CAFE_OUT") {
+          keluar += qty;
+        }
+      }
+
+      return {
+        productId: product.id,
+        productSku: product.sku ?? "",
+        productNama: product.nama ?? "",
+        masuk,
+        keluar,
+        saldo: masuk - keluar,
+      };
+    })
+  );
+
+  return balances.filter((item) => item.saldo > 0);
 }
 
 export async function recordCafeDeposit({ productId, qty, movementDate, notes, operationKey }) {
