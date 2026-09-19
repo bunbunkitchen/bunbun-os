@@ -98,13 +98,32 @@ export async function getFrozenProcessingSplits() {
 }
 
 export async function getProductStockMovements({ productId, batchSplitId, movementTypes } = {}) {
-  let query = supabase.from(MOVEMENT_TABLE).select(`*, products (sku, nama), production_batch_splits (lot_code)`).eq("is_deleted", false).order("movement_date", { ascending: false }).order("created_at", { ascending: false });
-  if (productId) query = query.eq("product_id", productId);
-  if (batchSplitId) query = query.eq("batch_split_id", batchSplitId);
-  if (movementTypes?.length) query = query.in("movement_type", movementTypes);
-  const { data, error } = await query;
-  if (error) throwProductStockError(error);
-  return (data ?? []).map(mapMovement);
+  const pageSize = 1000;
+  const allRows = [];
+
+  for (let from = 0; ; from += pageSize) {
+    let query = supabase
+      .from(MOVEMENT_TABLE)
+      .select(`*, products (sku, nama), production_batch_splits (lot_code)`)
+      .eq("is_deleted", false)
+      .order("movement_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (productId) query = query.eq("product_id", productId);
+    if (batchSplitId) query = query.eq("batch_split_id", batchSplitId);
+    if (movementTypes?.length) query = query.in("movement_type", movementTypes);
+
+    const { data, error } = await query;
+    if (error) throwProductStockError(error);
+
+    const rows = data ?? [];
+    allRows.push(...rows);
+
+    if (rows.length < pageSize) break;
+  }
+
+  return allRows.map(mapMovement);
 }
 
 export async function getFrozenStockByProductAndLot() {
