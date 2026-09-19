@@ -51,7 +51,7 @@ export default function ProductStock() {
     setFrozenLots(lots);
     setFrozenBalances(frozen);
     setProcessingSplits(processing);
-    setFinishedBalances(finished.filter((item) => item.saldo !== 0));
+    // Hanya tampilkan stok produk jadi yang benar-benar tersedia.\n    // Jangan pernah menampilkan saldo 0 atau negatif di daftar stok.\n    setFinishedBalances(finished.filter((item) => Number(item.saldo) > 0));
   }, []);
 
   useEffect(() => {
