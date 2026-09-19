@@ -136,7 +136,7 @@ export async function getFinishedProductBalances() {
     current.saldo = current.masuk - current.keluar;
     products.set(movement.productId, current);
   });
-  return Array.from(products.values()).sort((a, b) => a.productNama.localeCompare(b.productNama, "id"));
+  // Stok produk jadi yang ditampilkan harus benar-benar tersedia.\n  // Saldo dihitung dari movement: FINISHED_IN + OPENING_BALANCE + CAFE_IN - CAFE_OUT.\n  // Jangan tampilkan saldo nol/negatif di UI; data movement historis tetap utuh di database.\n  return Array.from(products.values())\n    .filter((item) => item.saldo > 0)\n    .sort((a, b) => a.productNama.localeCompare(b.productNama, "id"));
 }
 
 export async function recordCafeDeposit({ productId, qty, movementDate, notes, operationKey }) {
