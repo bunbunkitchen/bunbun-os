@@ -146,19 +146,21 @@ export async function getAvailableFrozenLots() {
 }
 
 export async function getFinishedProductBalances() {
-  const { data, error } = await supabase.rpc("get_finished_product_balances");
+  const { data, error } = await supabase
+    .from("finished_product_stock_balances")
+    .select("product_id, product_sku, product_nama, masuk, keluar, saldo")
+    .order("product_nama", { ascending: true });
+
   if (error) throwProductStockError(error);
 
-  return (data ?? [])
-    .map((item) => ({
-      productId: item.product_id,
-      productSku: item.product_sku ?? "",
-      productNama: item.product_nama ?? "",
-      masuk: Number(item.masuk || 0),
-      keluar: Number(item.keluar || 0),
-      saldo: Number(item.saldo || 0),
-    }))
-    .filter((item) => item.saldo > 0);
+  return (data ?? []).map((item) => ({
+    productId: item.product_id,
+    productSku: item.product_sku ?? "",
+    productNama: item.product_nama ?? "",
+    masuk: Number(item.masuk || 0),
+    keluar: Number(item.keluar || 0),
+    saldo: Number(item.saldo || 0),
+  }));
 }
 export async function recordCafeDeposit({ productId, qty, movementDate, notes, operationKey }) {
   return invokeFrozenFlowRpc("record_cafe_deposit", { p_product_id: Number(productId), p_qty: Number(qty), p_movement_date: movementDate, p_notes: notes || null }, operationKey);
