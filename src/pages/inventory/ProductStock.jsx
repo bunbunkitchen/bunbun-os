@@ -42,16 +42,28 @@ export default function ProductStock() {
   const [pageError, setPageError] = useState("");
 
   const loadData = useCallback(async () => {
-    const [lots, frozen, processing, finished] = await Promise.all([
+    const [lotsResult, frozenResult, processingResult, finishedResult] = await Promise.allSettled([
       getAvailableFrozenLots(),
       getFrozenProductBalances(),
       getFrozenProcessingSplits(),
       getFinishedProductBalances(),
     ]);
-    setFrozenLots(lots);
-    setFrozenBalances(frozen);
-    setProcessingSplits(processing);
-    // Hanya tampilkan stok produk jadi yang benar-benar tersedia.\n    // Jangan pernah menampilkan saldo 0 atau negatif di daftar stok.\n    setFinishedBalances(finished.filter((item) => Number(item.saldo) > 0));
+
+    if (lotsResult.status === "fulfilled") setFrozenLots(lotsResult.value);
+    if (frozenResult.status === "fulfilled") setFrozenBalances(frozenResult.value);
+    if (processingResult.status === "fulfilled") setProcessingSplits(processingResult.value);
+    if (finishedResult.status === "fulfilled") {
+      setFinishedBalances(
+        finishedResult.value.filter((item) => Number(item.saldo) > 0)
+      );
+    }
+
+    const failed = [lotsResult, frozenResult, processingResult, finishedResult]
+      .filter((result) => result.status === "rejected")
+      .map((result) => result.reason)
+      .find(Boolean);
+
+    if (failed) throw failed;
   }, []);
 
   useEffect(() => {
