@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import FrozenReleaseForm from "../../components/forms/FrozenReleaseForm";
 import FinishedProductReleaseForm from "../../components/forms/FinishedProductReleaseForm";
+import ProductStockAdjustmentForm from "../../components/forms/ProductStockAdjustmentForm";
 import ProductionResultForm from "../../components/forms/ProductionResultForm";
 import Modal from "../../components/modal/Modal";
 import Button from "../../components/ui/Button";
@@ -10,7 +11,9 @@ import LoadingState from "../../components/ui/LoadingState";
 import PageTitle from "../../components/ui/PageTitle";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { useToast } from "../../context/ToastContext";
+import { useAuth } from "../../context/AuthContext";
 import {
+  createProductStockAdjustment,
   getAvailableFrozenLots,
   getFinishedProductBalances,
   getFrozenProcessingSplits,
@@ -31,6 +34,7 @@ function getLocalDate() {
 
 export default function ProductStock() {
   const toast = useToast();
+  const { role } = useAuth();
   const [frozenLots, setFrozenLots] = useState([]);
   const [frozenBalances, setFrozenBalances] = useState([]);
   const [processingSplits, setProcessingSplits] = useState([]);
@@ -38,6 +42,8 @@ export default function ProductStock() {
   const [releaseLot, setReleaseLot] = useState(null);
   const [bakingSplit, setBakingSplit] = useState(null);
   const [showFinishedRelease, setShowFinishedRelease] = useState(false);
+  const [showProductAdjustment, setShowProductAdjustment] = useState(false);
+  const [savingProductAdjustment, setSavingProductAdjustment] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState("");
 
@@ -125,6 +131,33 @@ export default function ProductStock() {
       const message = getProductStockErrorMessage(error);
       setPageError(message);
       toast.error(message);
+    }
+  }
+
+  async function handleProductAdjustment(values) {
+    if (savingProductAdjustment) return;
+
+    setSavingProductAdjustment(true);
+    try {
+      await createProductStockAdjustment({
+        productId: values.productId,
+        jenis: values.jenis,
+        jumlah: values.jumlah,
+        tanggal: values.tanggal || getLocalDate(),
+        alasan: values.alasan,
+        keterangan: values.keterangan,
+        operationKey: values.operationKey,
+      });
+      await loadData();
+      setShowProductAdjustment(false);
+      toast.success("Penyesuaian stok produk berhasil disimpan.");
+    } catch (error) {
+      const message = getProductStockErrorMessage(error);
+      setPageError(message);
+      toast.error(message);
+      throw error;
+    } finally {
+      setSavingProductAdjustment(false);
     }
   }
 
@@ -227,9 +260,19 @@ export default function ProductStock() {
             <h2 className="text-xl font-bold text-gray-900">Stok Produk Jadi</h2>
             <p className="mt-1 text-sm text-gray-500">Saldo total setiap jenis produk yang tersedia.</p>
           </div>
-          <Button onClick={() => setShowFinishedRelease(true)} disabled={!finishedBalances.length}>
-            Keluarkan Produk
-          </Button>
+          <div className="flex flex-wrap justify-end gap-2">
+            {role === "owner" && (
+              <Button
+                onClick={() => setShowProductAdjustment(true)}
+                className="bg-gray-700 hover:bg-gray-800"
+              >
+                ± Penyesuaian Stok
+              </Button>
+            )}
+            <Button onClick={() => setShowFinishedRelease(true)} disabled={!finishedBalances.length}>
+              Keluarkan Produk
+            </Button>
+          </div>
         </div>
 
         {!finishedBalances.length ? (
@@ -262,6 +305,16 @@ export default function ProductStock() {
           products={finishedBalances}
           onSave={handleFinishedRelease}
           onCancel={() => setShowFinishedRelease(false)}
+        />
+      </Modal>
+      <Modal
+        open={showProductAdjustment}
+        onClose={() => !savingProductAdjustment && setShowProductAdjustment(false)}
+      >
+        <ProductStockAdjustmentForm
+          onSave={handleProductAdjustment}
+          onCancel={() => setShowProductAdjustment(false)}
+          saving={savingProductAdjustment}
         />
       </Modal>
     </div>
