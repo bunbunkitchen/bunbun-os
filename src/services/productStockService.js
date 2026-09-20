@@ -146,10 +146,7 @@ export async function getAvailableFrozenLots() {
 }
 
 export async function getFinishedProductBalances() {
-  const { data, error } = await supabase
-    .from("finished_product_stock_balances")
-    .select("product_id, product_sku, product_nama, masuk, keluar, saldo")
-    .order("product_nama", { ascending: true });
+  const { data, error } = await supabase.rpc("get_finished_product_balances");
 
   if (error) throwProductStockError(error);
 
