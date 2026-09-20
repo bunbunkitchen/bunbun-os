@@ -176,3 +176,32 @@ export async function recordMultiProductRelease({ movementDate, destination, not
   if (error) throwProductStockError(error);
   return { ...(data ?? {}), operationKey: key };
 }
+
+export async function createProductStockAdjustment({
+  productId,
+  jenis,
+  jumlah,
+  tanggal,
+  alasan,
+  keterangan,
+  operationKey,
+}) {
+  const key = operationKey || createProductStockOperationKey();
+
+  const { data, error } = await supabase.rpc(
+    "record_product_stock_adjustment",
+    {
+      p_product_id: Number(productId),
+      p_adjustment_type: jenis,
+      p_qty: Number(jumlah),
+      p_movement_date: tanggal,
+      p_reason: alasan?.trim() || null,
+      p_notes: keterangan?.trim() || null,
+      p_operation_key: key,
+    }
+  );
+
+  if (error) throwProductStockError(error);
+
+  return { ...(data ?? {}), operationKey: key };
+}
