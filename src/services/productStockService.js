@@ -28,6 +28,7 @@ export function getProductStockErrorMessage(error) {
   const message = String(error?.message || "").trim();
   if (!message) return "Proses stok produk gagal. Silakan coba lagi.";
   if (message.includes("Akses operasional")) return "Anda tidak memiliki akses untuk memproses stok produk.";
+  if (message.includes("Akses penyesuaian stok produk")) return "Penyesuaian stok produk hanya dapat dilakukan oleh owner.";
   if (message.includes("Permintaan ini sudah pernah dicatat")) return "Tindakan ini sudah diproses. Hindari mengirim ulang tindakan yang sama.";
   if (message.includes("Stok frozen lot tidak cukup")) return message;
   if (message.includes("Stok produk jadi tidak cukup")) return message;
