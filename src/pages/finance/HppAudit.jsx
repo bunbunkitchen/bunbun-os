@@ -14,7 +14,7 @@ function currentMonthWib() {
 export default function HppAudit() {
   const [month, setMonth] = useState(currentMonthWib);
   const [audit, setAudit] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [batchId, setBatchId] = useState("");
   const [batchInfo, setBatchInfo] = useState(null);
@@ -23,17 +23,21 @@ export default function HppAudit() {
 
   useEffect(() => {
     let cancelled = false;
-    setBusy(true);
-    setAudit(null);
-    setBatchInfo(null);
-    setBatchId("");
-    setError("");
     getMonthlyHppAudit(month)
       .then(value => { if (!cancelled) setAudit(value); })
       .catch(err => { if (!cancelled) setError(err.message || "Audit gagal dimuat."); })
       .finally(() => { if (!cancelled) setBusy(false); });
     return () => { cancelled = true; };
   }, [month]);
+
+  function handleMonthChange(event) {
+    setMonth(event.target.value);
+    setBusy(true);
+    setAudit(null);
+    setBatchInfo(null);
+    setBatchId("");
+    setError("");
+  }
 
   async function inspectBatch(event, chosenId = batchId) {
     if (event) event.preventDefault();
@@ -59,7 +63,7 @@ export default function HppAudit() {
       </div>
       <div className="rounded-xl border border-[#D9D8D0] bg-white p-5">
         <label htmlFor="audit-month" className="mr-3 text-sm font-semibold">Bulan</label>
-        <input id="audit-month" type="month" value={month} onChange={e => setMonth(e.target.value)}
+        <input id="audit-month" type="month" value={month} onChange={handleMonthChange}
           className="rounded-lg border border-[#D9D8D0] px-3 py-2" />
       </div>
       {busy && <p>Memuat data...</p>}
