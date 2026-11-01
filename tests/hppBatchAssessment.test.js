@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assessBatchCostingSnapshot } from '../src/utils/hppBatchAssessment.js';
+import { assessBatchCostingSnapshot, assessMaterialValuationCoverage } from '../src/utils/hppBatchAssessment.js';
 
 const sample = { batch: { id: 5, status: 'Finished' },
   materials: [{ id: 2, ingredient_id: 3, qty: 100, unit_value: 11 }],
@@ -26,4 +26,17 @@ test('empty material and split arrays cannot be marked ready', () => {
 });
 test('reject malformed batch input', () => {
   assert.throws(() => assessBatchCostingSnapshot({ batch: null, materials: [], splits: [] }));
+});
+
+test('monthly coverage never turns unknown unit values into monetary HPP', () => {
+  const x = assessMaterialValuationCoverage([
+    { id: 1, qty: 3, unit_value: null },
+    { id: 2, qty: 4, unit_value: 1100 },
+    { id: 3, qty: 0, unit_value: null },
+  ]);
+  assert.equal(x.transactionCount, 3);
+  assert.equal(x.missingValueCount, 2);
+  assert.equal(x.invalidQuantityCount, 1);
+  assert.equal(x.monetaryTotal, null);
+  assert.equal(x.readyToPost, false);
 });
