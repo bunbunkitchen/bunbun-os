@@ -25,6 +25,8 @@ export default function HppAudit() {
     let cancelled = false;
     setBusy(true);
     setAudit(null);
+    setBatchInfo(null);
+    setBatchId("");
     setError("");
     getMonthlyHppAudit(month)
       .then(value => { if (!cancelled) setAudit(value); })
@@ -33,12 +35,13 @@ export default function HppAudit() {
     return () => { cancelled = true; };
   }, [month]);
 
-  async function inspectBatch(event) {
-    event.preventDefault();
+  async function inspectBatch(event, chosenId = batchId) {
+    if (event) event.preventDefault();
+    setBatchId(String(chosenId));
     setBatchBusy(true);
     setBatchError("");
     setBatchInfo(null);
-    try { setBatchInfo(await getBatchCostingSnapshot(batchId)); }
+    try { setBatchInfo(await getBatchCostingSnapshot(chosenId)); }
     catch (err) { setBatchError(err.message || "Gagal memuat batch."); }
     finally { setBatchBusy(false); }
   }
@@ -124,6 +127,18 @@ export default function HppAudit() {
       <section className="rounded-xl border bg-white p-5">
         <h2 className="text-lg font-semibold">Pemeriksaan batch</h2>
         <p className="mt-1 text-sm">Periksa baris bahan yang belum mempunyai nilai persediaan dan jumlah split.</p>
+        {audit?.batches.rows?.length > 0 && (
+          <div className="mt-3 max-h-52 overflow-y-auto rounded-lg border p-2">
+            <p className="mb-2 text-xs text-[#777A6D]">Pilih batch dari bulan yang dipilih:</p>
+            {audit.batches.rows.map(b => (
+              <button key={b.id} type="button" disabled={batchBusy}
+                onClick={() => inspectBatch(null, b.id)}
+                className="mb-1 mr-1 rounded border px-2 py-1 text-xs hover:bg-[#F1F3ED] disabled:opacity-50">
+                {b.kode || `Batch #${b.id}`}
+              </button>
+            ))}
+          </div>
+        )}
         <form onSubmit={inspectBatch} className="mt-3 flex gap-2">
           <input aria-label="ID batch" type="number" min="1" step="1" required
             value={batchId} onChange={e => setBatchId(e.target.value)}
@@ -140,6 +155,9 @@ export default function HppAudit() {
           <p>Bahan belum bernilai: {batchInfo.missingMaterialValues.length} baris</p>
           <p>Split: {batchInfo.splits.length} baris</p>
           <p>Status audit: {batchInfo.costingStatus} (bukan HPP final)</p>
+          {batchInfo.warnings?.length > 0 && <ul className="mt-2 list-disc pl-5 text-amber-900">
+            {batchInfo.warnings.map((warning, idx) => <li key={idx}>{warning}</li>)}
+          </ul>}
         </div>}
       </section>
     </div>
