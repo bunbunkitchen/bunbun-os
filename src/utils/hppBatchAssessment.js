@@ -30,3 +30,18 @@ export function assessBatchCostingSnapshot({ batch, materials = [], splits = [] 
     readyToPost: false,
   };
 }
+
+/** Counts only. It never infers money from missing historical unit_value. */
+export function assessMaterialValuationCoverage(lines) {
+  if (!Array.isArray(lines)) throw new Error("Transaksi bahan tidak valid.");
+  const missing = lines.filter(line => line.unit_value === null || line.unit_value === undefined);
+  const invalid = lines.filter(line => !Number.isFinite(Number(line.qty)) || Number(line.qty) <= 0);
+  return {
+    transactionCount: lines.length,
+    missingValueCount: missing.length,
+    invalidQuantityCount: invalid.length,
+    coveredCount: lines.length - missing.length,
+    monetaryTotal: null,
+    readyToPost: false,
+  };
+}
