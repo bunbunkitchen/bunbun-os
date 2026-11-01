@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getMonthlyHppAudit } from "../../services/hppAuditService";
 import { getBatchCostingSnapshot } from "../../services/batchCostingReadService";
+import HistoricalInventoryAudit from "../../components/hpp/HistoricalInventoryAudit";
 
 const rupiah = n => Number(n || 0).toLocaleString("id-ID", {
   style: "currency", currency: "IDR", maximumFractionDigits: 0,
@@ -135,6 +136,7 @@ export default function HppAudit() {
           </section>
         </>
       )}
+      <HistoricalInventoryAudit />
       <section className="rounded-xl border bg-white p-5">
         <h2 className="text-lg font-semibold">Pemeriksaan batch</h2>
         <p className="mt-1 text-sm">Periksa baris bahan yang belum mempunyai nilai persediaan dan jumlah split.</p>
