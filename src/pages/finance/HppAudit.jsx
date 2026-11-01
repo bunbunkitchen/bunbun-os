@@ -66,7 +66,7 @@ export default function HppAudit() {
       {error && <p role="alert" className="text-red-700">{error}</p>}
       {audit && !busy && (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border bg-white p-4">
               <p className="text-sm text-[#777A6D]">Total pengeluaran kas</p>
               <p className="text-xl font-bold">{rupiah(audit.expensesReview.totalPaid)}</p>
@@ -81,6 +81,13 @@ export default function HppAudit() {
               <p className="text-sm text-[#777A6D]">Kolom selesai (pcs)</p>
               <p className="text-xl font-bold">{audit.batches.completedUnitsField.toLocaleString("id-ID")}</p>
               <p className="text-xs">Belum direkonsiliasi terhadap split/frozen</p>
+            </div>
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+              <p className="text-sm text-amber-900">Pemakaian bahan belum bernilai</p>
+              <p className="text-xl font-bold text-amber-900">
+                {audit.materialValuation.missingValueCount.toLocaleString("id-ID")} / {audit.materialValuation.transactionCount.toLocaleString("id-ID")}
+              </p>
+              <p className="text-xs text-amber-800">Berdasarkan tanggal transaksi; HPP belum boleh diposting</p>
             </div>
           </div>
           <section className="rounded-xl border bg-white p-5">
