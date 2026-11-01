@@ -3,6 +3,7 @@
  */
 import { supabase } from '../lib/supabase';
 import { monthBounds, reviewMonthlyExpenses } from '../utils/hppCostReview';
+import { assessMaterialValuationCoverage } from '../utils/hppBatchAssessment';
 
 async function fetchAll(queryFactory) {
   const rows = [];
@@ -18,7 +19,7 @@ async function fetchAll(queryFactory) {
 
 export async function getMonthlyHppAudit(month) {
   const bounds = monthBounds(month);
-  const [expenses, batches] = await Promise.all([
+  const [expenses, batches, materialMovements] = await Promise.all([
     fetchAll(() => supabase.from('expenses')
       .select('id,tanggal,kategori,nominal,keterangan,purchase_id,is_deleted')
       .eq('is_deleted', false)
@@ -31,10 +32,18 @@ export async function getMonthlyHppAudit(month) {
       .gte('created_at', bounds.startTimestamp)
       .lt('created_at', bounds.nextTimestamp)
       .order('id', { ascending: true })),
+    fetchAll(() => supabase.from('inventory_transactions')
+      .select('id,qty,unit_value')
+      .eq('is_deleted', false)
+      .eq('transaction_type', 'PRODUCTION_OUT')
+      .gte('transaction_date', bounds.start)
+      .lt('transaction_date', bounds.next)
+      .order('id', { ascending: true })),
   ]);
   return {
     month,
     expensesReview: reviewMonthlyExpenses(expenses),
+    materialValuation: assessMaterialValuationCoverage(materialMovements),
     batches: {
       count: batches.length,
       completedUnitsField: batches.reduce((sum, row) => sum + Number(row.selesai || 0), 0),
