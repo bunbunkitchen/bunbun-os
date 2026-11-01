@@ -3,6 +3,7 @@
  * No writes and no changes to existing HPP or stock logic.
  */
 import { supabase } from "../lib/supabase";
+import { assessBatchCostingSnapshot } from "../utils/hppBatchAssessment";
 
 const active = (query) => query.eq("is_deleted", false);
 
@@ -31,17 +32,11 @@ export async function getBatchCostingSnapshot(batchId) {
 
   const materials = materialsResult.data ?? [];
   const splits = splitsResult.data ?? [];
-  const missingMaterialValues = materials.filter(
-    (m) => m.unit_value === null || m.unit_value === undefined
-  ).map((m) => m.id);
-
   return {
     batch,
     materials,
     splits,
-    costingStatus: missingMaterialValues.length ? "NEEDS_VALUATION" : "READY_FOR_REVIEW",
-    missingMaterialValues,
-    // Never infer final yield solely from batch.status or split.qty.
-    // Labor, overhead, valuation, and final output allocation are separate stages.
+    ...assessBatchCostingSnapshot({ batch, materials, splits }),
+    // A split quantity or batch status is not the final usable yield.
   };
 }
