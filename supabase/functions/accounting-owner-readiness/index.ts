@@ -21,10 +21,13 @@ import { isIsolatedAccountingStaging } from "../_shared/accountingStagingGuard.j
 const projectUrl = Deno.env.get("SUPABASE_URL") || "";
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const allowedOrigin = Deno.env.get("BUNBUN_ACCOUNTING_ALLOWED_ORIGIN") || "";
+// Reviewed local smoke configuration, enabled only on the exact isolated project.
+const isolatedProject = projectUrl === "https://pkgrqalpazhwdcxmthvb.supabase.co";
+const allowedOrigin = Deno.env.get("BUNBUN_ACCOUNTING_ALLOWED_ORIGIN") ||
+  (isolatedProject ? "http://localhost:5173" : "");
 const stageEnabled = isIsolatedAccountingStaging({
-  stageFlag: Deno.env.get("BUNBUN_ACCOUNTING_STAGE"),
-  stagingProjectRef: Deno.env.get("BUNBUN_ACCOUNTING_STAGING_REF"),
+  stageFlag: Deno.env.get("BUNBUN_ACCOUNTING_STAGE") || (isolatedProject ? "isolated-staging" : ""),
+  stagingProjectRef: Deno.env.get("BUNBUN_ACCOUNTING_STAGING_REF") || (isolatedProject ? "pkgrqalpazhwdcxmthvb" : ""),
   projectUrl,
   allowedOrigin,
 });

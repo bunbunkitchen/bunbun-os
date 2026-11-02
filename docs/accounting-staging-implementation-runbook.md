@@ -1,6 +1,6 @@
 # Bunbun OS — Supabase Isolated Staging, Owner Auth & Opening Cost Runbook
 
-**STATUS 2026-11-02: STAGING CLOUD BELUM DIBUAT; PENAWARAN BIAYA MENUNGGU KONFIRMASI EKSPILISIT.** Semua file SQL `docs/sql/accounting-*-staging.sql` masih prototipe laboratorium; jangan langsung diterapkan pada Supabase production ataupun staging tanpa rekonsiliasi skema.
+**STATUS 2026-11-02: staging `pkgrqalpazhwdcxmthvb` ACTIVE_HEALTHY; baseline 21 tabel terpasang, hardening anonim dan signup diterapkan. Lihat catatan verifikasi terbaru di bagian akhir.** Semua file SQL `docs/sql/accounting-*-staging.sql` masih prototipe laboratorium; jangan langsung diterapkan pada Supabase production ataupun staging tanpa rekonsiliasi skema.
 
 ## 1. Proyek dan biaya
 - Organisasi Supabase yang terhubung: `Bunbun Kitchen` (Free), project produksi `bunbun-os` di `ap-southeast-1` dengan PostgreSQL 17.6. Hanya satu project terdeteksi, **tidak ada branch**. Tidak ada staging baru saat audit.
@@ -50,10 +50,18 @@
 | Read-only audit struktur produksi & gap HPP | SELESAI |
 | CI PG16+PG17 gabungan 9 keluarga stock writers | SELESAI |
 | Script smoke test staging-only Owner Auth | DISIAPKAN, BELUM LIVE |
-| Proyek staging terpisah | BLOCKED: konfirmasi cost $0 diperlukan |
-| Baseline schema/trigger real ke staging | BELUM |
+| Proyek staging terpisah | ACTIVE_HEALTHY: pkgrqalpazhwdcxmthvb |
+| Baseline schema/trigger real ke staging | TERPASANG: 21 tabel; kompatibilitas writer akuntansi belum disahkan |
 | Auth Owner/Baker nyata di staging | BELUM |
 | Opname + cost evidence approved dan ledger posting | BELUM |
 | Laba rugi aktual production | TETAP DISABLED |
 
 **Tidak ada perubahan pada production Supabase ataupun branch `main`.**
+## Verifikasi live terbaru — 2026-11-02
+- Staging ref `pkgrqalpazhwdcxmthvb`, 21 tabel public, tanpa impor transaksi atau akun produksi.
+- Real Auth password login akun sintetis dan Edge `verify_jwt=true`: Owner aktif 200; Baker 403; Owner nonaktif 403; anonymous 401; forged token 401. Owner hanya mendapat `BLOCKED_PENDING_CUTOVER`, `mayPost=false`, `financialValuesAvailable=false`.
+- Metadata signup `role=owner` tetap menghasilkan profil `helper`; role tes dinaikkan hanya melalui admin di staging.
+- Semua akun sintetis dihapus setelah tes. Endpoint provisioning sementara telah diganti respons 410 tanpa kode provisioning.
+- ACL anonim Stock Adjustment false. Advisor tidak lagi melaporkan anonymous SECURITY DEFINER atau mutable search_path; masih ada 20 warning authenticated SECURITY DEFINER yang harus direview per fungsi sebelum cutover.
+- 27 tes guard/auth/target lokal lulus; build Vite lulus. Ini belum membuktikan seluruh 9 writer akuntansi pada skema cloud asli.
+- Pemasangan ledger akuntansi, pengujian stok ujung ke ujung, bukti biaya, opname dan persetujuan saldo awal tetap belum selesai. Jangan sahkan HPP aktual.
