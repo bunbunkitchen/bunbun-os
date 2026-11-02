@@ -120,7 +120,7 @@ test("goods sent to café do NOT produce revenue or COGS until sale is posted", 
   assert.equal(report.incomeStatement.revenue, 0);
   assert.equal(report.incomeStatement.cogs, 0);
   assert.equal(report.incomeStatement.netProfit, 0);
-  assert.equal(report.financialPosition.assets, 1400000);
+  assert.equal(report.financialPosition.assets, 1500000);
   assert.equal(report.financialPosition.liabilities, 100000);
   assert.equal(report.financialPosition.totalEquity, 1400000);
 });
