@@ -83,6 +83,23 @@ begin
    if sqlerrm not like '%insufficient%' then raise; end if;
  end;
 
+ -- Reject a forged frozen position pointing to a FINISHED_IN movement rather
+ -- than its original FROZEN_IN. Exception subtransaction restores the test row.
+ begin
+   update bunbun_accounting.frozen_lot_positions
+   set source_movement_id=(
+     select id from public.product_stock_movements
+     where movement_type='FINISHED_IN' and product_id=1 limit 1)
+   where source_split_id=200;
+   perform bunbun_accounting.record_frozen_to_direct_staging(
+     200,1,'2026-11-07','CI-FORGED-FROZEN-SOURCE',
+     v_bad_key,v_owner);
+   raise exception 'UNEXPECTED SUCCESS forged frozen source link';
+ exception when others then
+   if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
+   if sqlerrm not like '%original matching FROZEN_IN%' then raise; end if;
+ end;
+
  -- Convert four units from root FROZEN to a derived DIRECT split.
  v_json:=bunbun_accounting.record_frozen_to_direct_staging(
    200,4,'2026-11-07','SIGNED-FROZEN-CONVERSION-20261107',
