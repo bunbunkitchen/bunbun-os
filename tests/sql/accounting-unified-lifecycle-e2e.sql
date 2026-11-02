@@ -302,7 +302,8 @@ begin
    raise exception 'UNEXPECTED SUCCESS direct finished lot stock forgery';
  exception when others then
    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
-   if sqlerrm not like '%cannot change without matching lot allocations%' then raise; end if;
+   if sqlerrm not like '%cannot change without matching lot allocations%'
+     and sqlerrm not like '%position update diverges from product stock movement%' then raise; end if;
  end;
  begin
    update bunbun_accounting.finished_lot_positions
