@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { getProposedCutoverInventory } from "../../services/hppCutoverService";
+import OpeningJournalPreview from "../../components/hpp/OpeningJournalPreview";
 import {
   isValidIsoDate, evaluateCutoverDraft, OPENING_FINANCIAL_FIELDS,
 } from "../../utils/hppCutoverOpening";
@@ -346,6 +347,7 @@ export default function CutoverPreparation() {
               penyesuaian stok, atau HPP historis yang dibuat dari formulir ini.
             </p>
           </section>
+          <OpeningJournalPreview draft={computed.result} />
         </>
       )}
     </div>
