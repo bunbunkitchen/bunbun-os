@@ -5,7 +5,6 @@
  */
 const TYPES = new Set(["FINISHED_IN","FROZEN_IN","FROZEN_OUT"]);
 const asId = value => String(value ?? "");
-const positive = value => Number.isSafeInteger(Number(value)) && Number(value) > 0;
 export function assessBatchLotSources({ batch, materials, splits, stockMovements }) {
   if (!batch || !Array.isArray(materials) || !Array.isArray(splits) ||
     !Array.isArray(stockMovements)) {
