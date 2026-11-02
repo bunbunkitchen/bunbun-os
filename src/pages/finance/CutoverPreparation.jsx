@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { getProposedCutoverInventory } from "../../services/hppCutoverService";
 import OpeningJournalPreview from "../../components/hpp/OpeningJournalPreview";
+import { inspectStockWriterReadiness } from "../../utils/accountingStockWriterReadiness";
 import {
   isValidIsoDate, evaluateCutoverDraft, OPENING_FINANCIAL_FIELDS,
 } from "../../utils/hppCutoverOpening";
@@ -167,6 +168,43 @@ export default function CutoverPreparation() {
         Unduh file draft sebelum meninggalkan halaman. Angka saldo buku hanya pembanding, bukan stok fisik
         atau saldo awal yang sudah disahkan. Tanggal cutover belum ditetapkan secara resmi.
       </div>
+      <section className="rounded-xl border bg-white p-5">
+        <h2 className="text-lg font-semibold text-[#595E48]">
+          Kesiapan pelacakan lot sebelum cutover
+        </h2>
+        <p className="mt-2 text-sm text-[#777A6D]">
+          Audit rekayasa sistem, bukan status persetujuan Owner. Prosedur lama belum
+          disambungkan ke pembukuan lot aktual; tidak ada tombol aktivasi.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          <span className="rounded-lg bg-[#F1F3ED] px-3 py-2">
+            Jalur stok terdata: <strong>{inspectStockWriterReadiness().totalWriters}</strong>
+          </span>
+          <span className="rounded-lg bg-[#FFF4D9] px-3 py-2 text-amber-900">
+            Prototipe PostgreSQL teruji: <strong>{inspectStockWriterReadiness().prototypeWriters}</strong>
+          </span>
+          <span className="rounded-lg bg-[#FFF4D9] px-3 py-2 text-amber-900">
+            Jalur aktif terintegrasi: <strong>0</strong>
+          </span>
+        </div>
+        <div className="mt-4 grid gap-2 md:grid-cols-2">
+          {inspectStockWriterReadiness().writers.map(item => (
+            <div key={item.rpc} className="rounded-lg border border-[#E0E3D8] p-3 text-sm">
+              <p className="font-semibold">{item.description}</p>
+              <p className="mt-1 break-all text-xs text-[#777A6D]">{item.rpc}</p>
+              <p className="mt-1 text-xs text-amber-900">
+                {item.status === "PROTOTYPE_ONLY"
+                  ? "Prototipe di database uji; belum terhubung ke OS aktif"
+                  : "Perlu integrasi lot sebelum diaktifkan"}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-amber-900">
+          Semua jalur harus teruji dengan stok fisik, biaya, pembatalan, dan
+          autentikasi Owner sebelum pencatatan laba aktual dapat diaktifkan.
+        </p>
+      </section>
       <div className="rounded-xl border bg-white p-5">
         <h2 className="mb-3 text-lg font-semibold">1. Tentukan tanggal mulai pencatatan baru</h2>
         <form onSubmit={loadReview} className="flex flex-wrap items-end gap-3">
