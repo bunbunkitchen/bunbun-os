@@ -8,6 +8,7 @@
  * Deployment requirements:
  * - Edge Gateway verify_jwt = true (do NOT disable it).
  * - BUNBUN_ACCOUNTING_STAGE=isolated-staging
+ * - BUNBUN_ACCOUNTING_STAGING_REF=<verified independent staging project ref>
  * - BUNBUN_ACCOUNTING_ALLOWED_ORIGIN=https://<trusted-staging-frontend>
  * - SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
  *
@@ -15,12 +16,18 @@
  */
 import { createClient } from "npm:@supabase/supabase-js@2.110.2";
 import { createOwnerReadinessHandler } from "../_shared/accountingOwnerReadiness.js";
+import { isIsolatedAccountingStaging } from "../_shared/accountingStagingGuard.js";
 
 const projectUrl = Deno.env.get("SUPABASE_URL") || "";
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const allowedOrigin = Deno.env.get("BUNBUN_ACCOUNTING_ALLOWED_ORIGIN") || "";
-const stageEnabled = Deno.env.get("BUNBUN_ACCOUNTING_STAGE") === "isolated-staging";
+const stageEnabled = isIsolatedAccountingStaging({
+  stageFlag: Deno.env.get("BUNBUN_ACCOUNTING_STAGE"),
+  stagingProjectRef: Deno.env.get("BUNBUN_ACCOUNTING_STAGING_REF"),
+  projectUrl,
+  allowedOrigin,
+});
 
 const authOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
