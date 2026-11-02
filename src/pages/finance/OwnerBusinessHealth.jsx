@@ -109,29 +109,36 @@ export default function OwnerBusinessHealth() {
   const [month, setMonth] = useState(currentWibMonth);
   const [mode, setMode] = useState("STAGING");
   const [reload, setReload] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [response, setResponse] = useState(null);
-  const [error, setError] = useState("");
+  const [fetchState, setFetchState] = useState({
+    key: "", data: null, error: "",
+  });
   const todayMonth = currentWibMonth();
+  const requestKey = month + ":" + reload;
 
   useEffect(() => {
     if (mode !== "STAGING") {
       return undefined;
     }
     let cancelled = false;
-    setLoading(true);
-    setResponse(null);
-    setError("");
     loadOwnerFinancialDashboard(chartMonths(month))
-      .then(result => { if (!cancelled) setResponse(result); })
-      .catch(reason => {
-        if (!cancelled) setError(reason.message || "Gagal memuat laporan akuntansi.");
+      .then(result => {
+        if (!cancelled) setFetchState({
+          key: requestKey, data: result, error: "",
+        });
       })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .catch(reason => {
+        if (!cancelled) setFetchState({
+          key: requestKey, data: null,
+          error: reason.message || "Gagal memuat laporan akuntansi.",
+        });
+      });
     return () => { cancelled = true; };
-  }, [month, reload, mode]);
+  }, [month, requestKey, mode]);
 
   const demo = mode === "SIMULASI";
+  const loading = !demo && fetchState.key !== requestKey;
+  const response = !demo && !loading ? fetchState.data : null;
+  const error = !demo && !loading ? fetchState.error : "";
   const records = useMemo(() => demo
     ? makeIllustrativeBusinessRecords(month, todayMonth)
     : response?.records || [], [demo, month, todayMonth, response]);
@@ -194,7 +201,7 @@ export default function OwnerBusinessHealth() {
         <button type="button"
           onClick={() => {
             setMode(current => current === "SIMULASI" ? "STAGING" : "SIMULASI");
-            setError("");
+            setReload(x => x + 1);
           }}
           className="rounded-lg bg-[#61755B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4F6349]">
           {demo ? "Kembali ke data staging" : "Lihat contoh dashboard"}
