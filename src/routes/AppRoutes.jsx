@@ -48,7 +48,7 @@ export default function AppRoutes() {
           <Route index element={<Dashboard />} />
           <Route path="profile" element={<Profile />} />
 
-          <Route path="users" element={<RoleRoute allowedRoles={["owner"]}><UserManagement /></RoleRoute>} />
+          <Route path="users" element={<RoleRoute allowedRoles={["owner", "admin"]}><UserManagement /></RoleRoute>} />
           <Route path="products" element={<RoleRoute allowedRoles={["owner"]}><Products /></RoleRoute>} />
           <Route path="categories" element={<RoleRoute allowedRoles={["owner"]}><Categories /></RoleRoute>} />
           <Route path="ingredients" element={<RoleRoute allowedRoles={["owner"]}><Ingredients /></RoleRoute>} />
@@ -65,12 +65,12 @@ export default function AppRoutes() {
           <Route path="purchasing" element={<RoleRoute allowedRoles={["owner", "baker"]}><Purchasing /></RoleRoute>} />
           <Route path="maintenance" element={<RoleRoute allowedRoles={["owner", "baker"]}><Maintenance /></RoleRoute>} />
 
-          <Route path="finance/income" element={<RoleRoute allowedRoles={["owner"]}><Income /></RoleRoute>} />
+          <Route path="finance/income" element={<RoleRoute allowedRoles={["owner", "cashier"]}><Income /></RoleRoute>} />
 
           {/* Penjualan dapat diinput oleh Owner dan Baker */}
           <Route path="sales" element={<RoleRoute allowedRoles={["owner", "baker"]}><Sales /></RoleRoute>} />
 
-          <Route path="finance/expense" element={<RoleRoute allowedRoles={["owner"]}><Expense /></RoleRoute>} />
+          <Route path="finance/expense" element={<RoleRoute allowedRoles={["owner", "cashier"]}><Expense /></RoleRoute>} />
           <Route path="finance/hpp-audit" element={<RoleRoute allowedRoles={["owner"]}><HppAudit /></RoleRoute>} />
           <Route path="finance/cutover" element={<RoleRoute allowedRoles={["owner"]}><CutoverPreparation /></RoleRoute>} />
           <Route path="finance/source-audit" element={<RoleRoute allowedRoles={["owner"]}><AccountingSourceReadiness /></RoleRoute>} />

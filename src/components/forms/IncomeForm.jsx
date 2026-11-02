@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import Input from "../ui/Input";
 import Button from "../ui/Button";
+import { useAuth } from "../../context/AuthContext";
 import { getAvailableIncomeLots } from "../../services/incomeService";
 
 export default function IncomeForm({
@@ -10,6 +11,8 @@ export default function IncomeForm({
   initialData = null,
   saving = false,
 }) {
+  const { role } = useAuth();
+  const canSelectLots = role === "owner";
   const isEditing = Boolean(initialData);
 
   const [form, setForm] = useState({
@@ -32,33 +35,16 @@ export default function IncomeForm({
   const [lotOptions, setLotOptions] =
     useState([]);
 
-  const [loadingLots, setLoadingLots] =
-    useState(true);
+  const [loadingLots, setLoadingLots] = useState(false);
 
   const [errors, setErrors] =
     useState({});
 
   useEffect(() => {
-    if (!initialData) {
-      return;
+    if (!canSelectLots) {
+      return undefined;
     }
 
-    setForm({
-      tanggal:
-        initialData.tanggal || "",
-      totalPenjualan:
-        initialData.totalPenjualan?.toString() ||
-        "",
-      asalSetoran:
-        initialData.asalSetoran || "",
-      kodeLot:
-        initialData.kodeLot || "",
-      keterangan:
-        initialData.keterangan || "",
-    });
-  }, [initialData]);
-
-  useEffect(() => {
     let active = true;
 
     async function loadLots() {
@@ -88,7 +74,7 @@ export default function IncomeForm({
     return () => {
       active = false;
     };
-  }, []);
+  }, [canSelectLots]);
 
   function handleChange(field, value) {
     setForm((previous) => ({
@@ -249,7 +235,7 @@ export default function IncomeForm({
           {renderError("asalSetoran")}
         </div>
 
-        <div>
+        {canSelectLots && <div>
           <select
             value={form.kodeLot}
             onChange={(event) =>
@@ -279,7 +265,7 @@ export default function IncomeForm({
               </option>
             ))}
           </select>
-        </div>
+        </div>}
 
         <div>
           <Input

@@ -14,8 +14,12 @@ import { getProductDemandInsights } from "../../services/productDemandService";
 export default function Dashboard() {
   const { role } = useAuth();
   const isOwner = role === "owner";
+  const isAdmin = role === "admin";
+  const isCashier = role === "cashier";
 
-  const [summary, setSummary] = useState({ income: 0, expense: 0, profit: 0, purchaseToday: 0, productionOrders: 0, draftOrders: 0, generatedOrders: 0, activeBatch: 0, finishedBatch: 0, finishedQty: 0, rejectedQty: 0, inventoryTransactions: 0, activeBatchItems: [] });
+  const emptySummary = { income: 0, expense: 0, profit: 0, purchaseToday: 0, productionOrders: 0, draftOrders: 0, generatedOrders: 0, activeBatch: 0, finishedBatch: 0, finishedQty: 0, rejectedQty: 0, inventoryTransactions: 0, activeBatchItems: [] };
+  const [summaryState, setSummaryState] = useState(null);
+  const summary = summaryState?.role === role ? summaryState.data : emptySummary;
   const [businessIntelligence, setBusinessIntelligence] = useState(null);
   const [productDemand, setProductDemand] = useState({ topProductsBySales: [], topProductsByOutgoing: [] });
   const [loading, setLoading] = useState(true);
@@ -26,9 +30,19 @@ export default function Dashboard() {
     async function loadDashboard() {
       try {
         setPageError("");
+        if (isCashier || isAdmin) {
+          if (isCashier) {
+            const summaryData = await getDashboardSummary();
+            if (!isMounted) return;
+            setSummaryState({ data: summaryData, role });
+          }
+          setBusinessIntelligence(null);
+          setProductDemand({ topProductsBySales: [], topProductsByOutgoing: [] });
+          return;
+        }
         const [summaryData, intelligenceData, demandData] = await Promise.all([getDashboardSummary(), getBusinessIntelligence(), getProductDemandInsights()]);
         if (!isMounted) return;
-        setSummary(summaryData);
+        setSummaryState({ data: summaryData, role });
         setBusinessIntelligence(intelligenceData);
         setProductDemand(demandData);
       } catch (error) {
@@ -40,9 +54,32 @@ export default function Dashboard() {
     }
     void loadDashboard();
     return () => { isMounted = false; };
-  }, []);
+  }, [role, isAdmin, isCashier]);
 
   if (loading) return <LoadingState message="Memuat dashboard..." />;
+  if (isCashier) {
+    return (
+      <div>
+        <PageTitle title="Ringkasan Kasir" subtitle="Pemasukan dan pengeluaran hari ini" />
+        {pageError && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{pageError}</div>}
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          <KpiCard title="Pemasukan Hari Ini" value={<Currency value={summary.income} />} subtitle="Setoran bersih Bunbun yang dicatat" icon={<MdAttachMoney />} tone="green" />
+          <KpiCard title="Pengeluaran Hari Ini" value={<Currency value={summary.expense} />} subtitle="Pengeluaran yang dicatat" icon={<MdMoneyOff />} tone="red" />
+          <KpiCard title="Selisih Hari Ini" value={<Currency value={summary.profit} />} subtitle="Belum memperhitungkan HPP aktual" icon={<MdAccountBalanceWallet />} tone={summary.profit >= 0 ? "amber" : "red"} />
+        </div>
+      </div>
+    );
+  }
+  if (isAdmin) {
+    return (
+      <div>
+        <PageTitle title="Manajemen Pengguna" subtitle="Akses Admin dibatasi untuk mengelola akun operasional Bunbun Kitchen." />
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+          Gunakan menu User Management untuk mengundang, mengubah role operasional, atau menonaktifkan pengguna.
+        </div>
+      </div>
+    );
+  }
   const lowStockCount = businessIntelligence?.lowStockCount ?? 0;
 
   return (

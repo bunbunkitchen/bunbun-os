@@ -18,6 +18,7 @@ import {
   MdMoneyOff,
   MdAssessment,
   MdBuild,
+  MdPeople,
   MdClose,
 } from "react-icons/md";
 
@@ -28,7 +29,7 @@ const menus = [
     name: "Dashboard",
     path: "/",
     icon: <MdDashboard />,
-    roles: ["owner", "baker", "helper"],
+    roles: ["owner", "baker", "helper", "admin", "cashier"],
   },
   {
     name: "Produk",
@@ -88,7 +89,7 @@ const menus = [
     name: "Pemasukan",
     path: "/finance/income",
     icon: <MdAttachMoney />,
-    roles: ["owner"],
+    roles: ["owner", "cashier"],
   },
   {
     name: "Penjualan",
@@ -100,7 +101,7 @@ const menus = [
     name: "Pengeluaran",
     path: "/finance/expense",
     icon: <MdMoneyOff />,
-    roles: ["owner"],
+    roles: ["owner", "cashier"],
   },
   {
     name: "Keuntungan & Pertumbuhan",
@@ -155,6 +156,12 @@ const menus = [
     path: "/settings",
     icon: <MdSettings />,
     roles: ["owner"],
+  },
+  {
+    name: "User Management",
+    path: "/users",
+    icon: <MdPeople />,
+    roles: ["owner", "admin"],
   },
 ];
 
