@@ -211,6 +211,19 @@ jobs:
           PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-bootstrap.sql
           PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-shaping-batch-staging.sql
           PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-e2e.sql
+      - name: Ensure simultaneous shaping requests cannot create duplicated root lots
+        run: |
+          createdb bunbun_shaping_race_ci
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-bootstrap.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-shaping-batch-staging.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-race-seed.sql
+          PGDATABASE=bunbun_shaping_race_ci bash tests/sql/accounting-shaping-race.sh
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
