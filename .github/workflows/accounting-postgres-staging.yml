@@ -6,6 +6,7 @@ on:
       - "docs/sql/accounting-schema-review.sql"
       - "docs/sql/accounting-posting-staging.sql"
       - "tests/sql/accounting-*.sql"
+      - "docs/sql/accounting-reports-staging.sql"
       - ".github/workflows/accounting-postgres-staging.yml"
   workflow_dispatch:
 
@@ -47,3 +48,11 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-posting-staging.sql
       - name: Verify posting and blocking cases in real PostgreSQL
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-posting-e2e.sql
+      - name: Verify bakery lifecycle and financial reports in fresh CI database
+        run: |
+          createdb bunbun_lifecycle_ci
+          PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-schema-review.sql
+          PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-posting-staging.sql
+          PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-reports-staging.sql
+          PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-bakery-lifecycle.sql
