@@ -127,4 +127,3 @@ export async function getFinancialReport({ startDate, endDate, role }) {
     },
   };
 }
-
