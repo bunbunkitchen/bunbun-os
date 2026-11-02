@@ -29,6 +29,7 @@ on:
       - "src/utils/accountingStockWriterReadiness.js"
       - "docs/sql/accounting-lot-release-staging.sql"
       - "docs/sql/accounting-lot-writer-gate-staging.sql"
+      - "docs/sql/accounting-frozen-baking-staging.sql"
       - "src/services/accountingSaleStockAuditService.js"
       - "src/pages/finance/SaleLotTraceAudit.jsx"
       - "src/utils/accountingBatchLotAudit.js"
@@ -176,6 +177,16 @@ jobs:
           PGDATABASE=bunbun_lot_guard_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-concurrency-seed.sql
           PGDATABASE=bunbun_lot_guard_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
           PGDATABASE=bunbun_lot_guard_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-writer-gate-e2e.sql
+      - name: Verify frozen-to-proofing and baking with root/derived lot conservation
+        run: |
+          createdb bunbun_frozen_baking_ci
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-e2e.sql
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
