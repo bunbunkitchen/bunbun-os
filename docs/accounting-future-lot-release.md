@@ -52,6 +52,16 @@ Fungsi privat `bunbun_accounting.record_lot_assigned_release` (SECURITY INVOKER,
 - Peran anon/authenticated tidak diberi akses langsung ke schema/fungsi privat; RLS diaktifkan.
 - Semua skenario **tanpa menulis jurnal laba/HPP atau setoran kas**.
 
+## TAHAP BARU: writer gate default-OFF dan audit semua prosedur stok
+- `docs/sql/accounting-lot-writer-gate-staging.sql` menambah **lot_tracking_control** dalam private schema, default `OFF`. Dalam mode OFF, prosedur mutasi stok lama tidak dibatasi oleh trigger baru. Ini hanya desain untuk isolated PostgreSQL, **bukan migrasi produksi**.
+- Saat mode `ON` pada database UJI, trigger di `public.product_stock_movements` memblokir mutasi yang tidak berasal dari transaksi lot atomik yang dapat diaudit; update/delete lama termasuk soft delete ditolak. Hanya source `CAFE_OUT` dari routine private yang sudah ditest dapat lewat. Dengan demikian ON **belum bisa dipakai untuk baking, frozen, sales, returns, adjustment**: semua writers tersebut tetap diblokir sampai benar-benar diintegrasikan.
+- Constraint trigger **DEFERRABLE INITIALLY DEFERRED** memeriksa di akhir transaksi: setiap `CAFE_OUT` harus cocok 100% dengan alokasi `lot_release_allocations`, header `RECORDED`, produk yang benar, serta total `original_qty - available_qty` yang sama dengan seluruh qty penggunaan lot. Hanya memberi marker pada session SQL tidak cukup untuk memalsukan sumber atau jumlah.
+- Tidak ada hak `UPDATE` `lot_tracking_control` bagi `service_role` biasa. Pengaktifan hanya direncanakan melalui proses cutover terpisah dengan persetujuan Owner, bukan tombol browser atau fitur sementara.
+- `tests/sql/accounting-lot-writer-gate-e2e.sql`: mengecek OFF tetap menerima mekanisme lama; ON menolak mutasi tanpa lot (`FINISHED_IN`, `FROZEN_OUT`, `CAFE_IN`, `ADJUSTMENT_OUT`, `CAFE_OUT`); menolak penonaktifan gate, percobaan marker tanpa header, pemalsuan header+alokasi tanpa pengurangan saldo, modifikasi/soft-delete, dan memastikan multi-product lot release benar masih lolos.
+- `src/utils/accountingStockWriterReadiness.js` dan `tests/hppStockWriterReadiness.test.js` mendaftarkan 9 prosedur penulis stok (frozen, baking, pengiriman, penjualan, edit/batal, adjustment). Hanya pengeluaran multi-produk punya prototipe SQL diuji; **0 prosedur sudah terhubung ke Bunbun aktif**. Halaman Owner `Persiapan Saldo Awal` menampilkan matriks ini tanpa tombol aktivasi.
+- Audit SELECT saja di Supabase aktif menunjukkan trigger `trg_refresh_finished_product_stock_balance` sudah memperbarui ringkasan stok setiap `INSERT/UPDATE/DELETE`, ditambah `prevent_sub_recipe_finished_stock_before_insert`. Pengujian baru harus tetap mempertahankan kerja trigger ini saat database staging aktual tersedia.
+- **Keberhasilan gate ON dalam unit test BUKAN izin mengaktifkan gate pada sistem saat ini**: layanan produksi pasti berhenti ketika baking, penjualan, adjustment atau frozen masih belum memakai lot baru.
+
 ## Pengaman sebelum boleh dipasang ke OS aktif
 **Jangan menjalankan SQL di Supabase produksi.** Secara khusus:
 1. Saat ini prosedur SQL memakai tanggal **2026-11-01 hanya sebagai batas minimum data UJI**. Itu bukan cutover yang disetujui Owner, dan HARUS diganti dengan pembacaan immutable `opening_snapshots` yang telah disahkan sebelum deploy mana pun.
