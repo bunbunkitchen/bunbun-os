@@ -157,6 +157,14 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
       - name: Test atomic multi-product release, rollback and idempotency
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-e2e.sql
+      - name: Verify simultaneous Owner requests cannot spend the same lot twice
+        run: |
+          createdb bunbun_lot_race_ci
+          PGDATABASE=bunbun_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-concurrency-seed.sql
+          PGDATABASE=bunbun_lot_race_ci bash tests/sql/accounting-lot-concurrency.sh
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
