@@ -88,10 +88,14 @@ jobs:
         run: npm run build
 
   accounting-postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        pg_version: ["16", "17"]
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgres:${{ matrix.pg_version }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: bunbun_ci_only
@@ -136,11 +140,15 @@ jobs:
           node tests/sql/accounting-owner-report-integration.mjs assert /tmp/bunbun-owner-report-ci.json
 
   lot-release-postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        pg_version: ["16", "17"]
     name: Private atomic lot release — isolated PostgreSQL
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgres:${{ matrix.pg_version }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: bunbun_lot_ci_only
