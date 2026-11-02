@@ -172,10 +172,12 @@ export function previewSaleToLotCogs({
     if (!required.has(id)) throw new Error("Alokasi berada di luar stok penjualan yang telah direkonsiliasi.");
   }
   const draft = proposeSoldLotCogsDrafts(lotTrace);
-  const matchedEventIds = new Set(assignments.map(x => x.lotEventId));
-  const selected = draft.proposals.filter(p => {
-    const suffix = p.sourceKey.split(":").slice(-1)[0];
-    return matchedEventIds.has(suffix);
+  const selected = assignments.map(a => {
+    const sold = soldById.get(a.lotEventId);
+    const key = "verified-cogs:" + sold.saleId + ":" + sold.id;
+    const proposal = draft.proposals.find(p => p.sourceKey === key);
+    if (!proposal) throw new Error("Usulan jurnal COGS tidak sesuai event lot.");
+    return proposal;
   });
   if (selected.length !== assignments.length) {
     throw new Error("Jumlah usulan jurnal COGS tidak sama dengan alokasi lot.");
