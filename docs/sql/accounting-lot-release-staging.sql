@@ -229,9 +229,9 @@ begin
     from bunbun_accounting.finished_lot_positions
     where product_id = v_product_id and location = 'FINISHED';
     select coalesce(sum(case
-      when movement_type in ('FINISHED_IN','OPENING_BALANCE','CAFE_IN')
+      when movement_type in ('FINISHED_IN','OPENING_BALANCE','CAFE_IN','ADJUSTMENT_IN')
         then qty
-      when movement_type = 'CAFE_OUT' then -qty
+      when movement_type in ('CAFE_OUT','ADJUSTMENT_OUT') then -qty
       else 0 end),0) into v_balanced_stock
     from public.product_stock_movements
     where product_id = v_product_id and is_deleted = false;
