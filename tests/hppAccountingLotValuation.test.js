@@ -299,3 +299,15 @@ test("all source objects untouched: pure draft and no actual posting",()=>{
   assert.equal(traced.readyToPost,false);
   assert.equal(traced.writesDatabase,false);
 });
+
+
+test("pre-release sales and transfers are rejected even if quantity is available",()=>{
+  const lots=draft().lots;
+  assert.equal(lots[0].releaseDate,"2026-11-03");
+  assert.throws(()=>traceLotCostDraft({lots,events:[
+    event("early-sale","DIRECT_SOLD",lots[0].lotId,1,"2026-11-02",9),
+  ]}),/tanggal|urutan/i);
+  assert.throws(()=>traceLotCostDraft({lots,events:[
+    event("early-convert","FROZEN_TO_FINISHED",lots[1].lotId,1,"2026-11-02"),
+  ]}),/tanggal|urutan/i);
+});
