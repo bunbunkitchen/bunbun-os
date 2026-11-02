@@ -15,6 +15,7 @@ const OWNER = "11111111-1111-4111-8111-111111111111";
 const ORIGIN = "https://staging.bunbun.example";
 const period = () => ({
   month: "2026-11", periodStatus: "CLOSED", openingApproved: true,
+  cutoverDate: "2026-11-01",
   incomeStatement: {
     netRevenue: "150000.00", cogs: "60000.00", grossProfit: "90000.00",
     operatingExpenses: "20000.00", netProfit: "70000.00",
@@ -242,6 +243,7 @@ test("SQL row mapper sends only the intended report fields", () => {
   const p = period();
   const row = {
     month: "2026-11", period_status: "CLOSED", opening_approved: true,
+    cutover_date: "2026-11-01",
     net_revenue: p.incomeStatement.netRevenue,
     cogs: p.incomeStatement.cogs,
     gross_profit: p.incomeStatement.grossProfit,
@@ -261,4 +263,17 @@ test("SQL row mapper sends only the intended report fields", () => {
   };
   assert.deepEqual(parsePrivateLedgerReportRows([row]), p);
   assert.equal("secret" in parsePrivateLedgerReportRows([row]), false);
+});
+
+
+test("approved cutover date must be real and must not start after report period", () => {
+  assert.throws(() => validatePostedFinancialSnapshot({
+    ...period(), cutoverDate: null,
+  }, "2026-11"), /belum siap/i);
+  assert.throws(() => validatePostedFinancialSnapshot({
+    ...period(), cutoverDate: "2026-02-30",
+  }, "2026-11"), /belum siap/i);
+  assert.throws(() => validatePostedFinancialSnapshot({
+    ...period(), cutoverDate: "2026-12-01",
+  }, "2026-11"), /belum siap/i);
 });
