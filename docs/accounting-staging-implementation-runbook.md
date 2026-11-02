@@ -62,7 +62,7 @@
 - Real Auth password login akun sintetis dan Edge `verify_jwt=true`: Owner aktif 200; Baker 403; Owner nonaktif 403; anonymous 401; forged token 401. Owner hanya mendapat `BLOCKED_PENDING_CUTOVER`, `mayPost=false`, `financialValuesAvailable=false`.
 - Metadata signup `role=owner` tetap menghasilkan profil `helper`; role tes dinaikkan hanya melalui admin di staging.
 - Semua akun sintetis dihapus setelah tes. Endpoint provisioning sementara telah diganti respons 410 tanpa kode provisioning.
-- ACL anonim Stock Adjustment false. Advisor tidak lagi melaporkan anonymous SECURITY DEFINER atau mutable search_path; masih ada 20 warning authenticated SECURITY DEFINER yang harus direview per fungsi sebelum cutover.
+- ACL anonim Stock Adjustment false. Advisor tidak lagi melaporkan anonymous SECURITY DEFINER atau mutable search_path; masih ada 17 warning authenticated SECURITY DEFINER yang harus direview per fungsi sebelum cutover.
 - 27 tes guard/auth/target lokal lulus; build Vite lulus. Ini belum membuktikan seluruh 9 writer akuntansi pada skema cloud asli.
 - Pemasangan ledger akuntansi, pengujian stok ujung ke ujung, bukti biaya, opname dan persetujuan saldo awal tetap belum selesai. Jangan sahkan HPP aktual.
 
@@ -85,7 +85,7 @@ SQL yang direview: `docs/sql/cloud-ledger-core-staging.sql` dan `docs/sql/cloud-
 ### Hasil pemeriksaan akhir
 Auth users = 0, products = 0, stock movements = 0, journals = 0, periods = 0; control `OFF`. Tidak ada saldo awal dummy yang tersimpan. `anon` dan `authenticated` tidak punya USAGE schema akuntansi maupun EXECUTE fungsi posting; seluruh 21 tabel private memakai RLS dan tidak ada fungsi SECURITY DEFINER di schema akuntansi.
 
-Advisor: 21 informasi `rls_enabled_no_policy` pada tabel private disengaja untuk akses backend service_role saja (tanpa akses browser); 20 warning authenticated SECURITY DEFINER pada fungsi legacy masih perlu audit per peran. Referensi:
+Advisor: 21 informasi `rls_enabled_no_policy` pada tabel private disengaja untuk akses backend service_role saja (tanpa akses browser); 17 warning authenticated SECURITY DEFINER pada fungsi legacy masih perlu audit per peran. Referensi:
 - https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
 - https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
 
@@ -93,3 +93,11 @@ Advisor: 21 informasi `rls_enabled_no_policy` pada tabel private disengaja untuk
 Ini memvalidasi mesin ledger dan sembilan keluarga stock writer pada skema asli. Belum memvalidasi seluruh integrasi UI/API aplikasi, dua koneksi bersamaan pada cloud, pengiriman sumber transaksi ke jurnal otomatis, perhitungan unit cost aktual atau laporan Owner live. CI concurrency lama tidak diklaim sebagai tes cloud. Edge readiness tetap `mayPost=false`; endpoint posting dan tampilan laba aktual belum diaktifkan. Tidak ada perubahan produksi atau merge main.
 
 Sebelum cutover: audit 20 warning legacy menurut peran; sambungkan backend/UI staging dan uji konkurensi cloud; lengkapi opname fisik, bukti invoice/biaya dan saldo awal yang disahkan Owner. Jangan memindahkan nilai simulasi atau mengaktifkan pelacakan produksi dari hasil ini.
+
+
+## Follow-up security ACL review — 2026-11-02
+The Supabase security advisor initially listed 20 authenticated `SECURITY DEFINER` functions. Catalog review classified three functions as trigger-only (`handle_new_user`, `prevent_sub_recipe_finished_stock`, and `refresh_finished_product_stock_balance`). Direct `EXECUTE` was revoked from `PUBLIC` and `authenticated` on those three in staging. Verification confirms the three still have their attached triggers and cannot be called by anonymous/authenticated roles. The advisor count fell from 20 to 17.
+
+The remaining 17 include application RPCs called by the frontend, role helper functions used by RLS, and a finished-stock balance function used by Inventory. They were retained pending a per-role live application regression check; indiscriminate revocation would break authorized production and inventory flows. The RPC bodies reviewed in the catalog use the active-session/role guard except the finished-balance reader, which is intentionally visible to app staff with inventory access. Function privileges remain unavailable to `anon`.
+
+The three-function ACL change is recorded in `docs/sql/staging-authenticated-trigger-rpcs.sql`. No application data changed. Production was not modified.
