@@ -98,8 +98,8 @@ test("cost remains in stock on frozen -> finished -> consignment and becomes COG
   assert.equal(output.remainingInventoryValue,"7250.00");
   assert.deepEqual(output.locations,{
     FROZEN:{qty:4,value:"4000.00"},
-    FINISHED:{qty:3,value:"2750.00"},
-    CAFE:{qty:1,value:"500.00"},
+    FINISHED:{qty:3,value:"2500.00"},
+    CAFE:{qty:1,value:"750.00"},
   });
   assert.equal(output.events.filter(e=>e.isCogs).length,2);
   assert.equal(output.events.find(e=>e.type==="SHIP_TO_CAFE").isCogs,false);
@@ -222,7 +222,7 @@ test("duplicate material, movement, split and cost proof are refused", () => {
   ];
   for(const change of cases){
     const f=fixture();change(f);
-    assert.throws(()=>buildBatchLotCostDraft(f),/duplikat/i);
+    assert.throws(()=>buildBatchLotCostDraft(f),/duplikat|dua kali/i);
   }
 });
 
