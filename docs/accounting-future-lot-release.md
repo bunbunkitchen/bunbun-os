@@ -62,6 +62,13 @@ Fungsi privat `bunbun_accounting.record_lot_assigned_release` (SECURITY INVOKER,
 - Audit SELECT saja di Supabase aktif menunjukkan trigger `trg_refresh_finished_product_stock_balance` sudah memperbarui ringkasan stok setiap `INSERT/UPDATE/DELETE`, ditambah `prevent_sub_recipe_finished_stock_before_insert`. Pengujian baru harus tetap mempertahankan kerja trigger ini saat database staging aktual tersedia.
 - **Keberhasilan gate ON dalam unit test BUKAN izin mengaktifkan gate pada sistem saat ini**: layanan produksi pasti berhenti ketika baking, penjualan, adjustment atau frozen masih belum memakai lot baru.
 
+## TAHAP TAMBAHAN: asal frozen dan hasil baking (PostgreSQL 16 khusus CI)
+- Rincian dan pembatas: `docs/accounting-frozen-baking-lot-flow.md`.
+- `docs/sql/accounting-frozen-baking-staging.sql` memperluas prototipe `writer gate` **hanya pada database uji**: fungsi privat mencatat `FROZEN_OUT` dengan source split frozen root, menciptakan split turunan `DIRECT`, lalu hanya hasil baking layak yang menjadi `FINISHED_IN` dan lot finished.
+- Saldo frozen dan finished, hasil reject, referensi sumber `FROZEN_IN`, idempotensi, kuantitas, dan kasus dua sesi simultan diuji sampai rekonsiliasi posisi lot. Menitipkan hasil ke kafe tetap bukan pengakuan penjualan.
+- Status teknik sekarang **3 dari 9 jalur mempunyai prototipe**, **0 dari 9 terintegrasi ke aplikasi aktif**. Pembuatan frozen root dari shaping, pembaruan status/akumulasi batch induk, penjualan, pembatalan, retur, penyesuaian stok, biaya aktual dan saldo awal resmi masih perlu integrasi.
+- Ini bukan migrasi Supabase siap pakai dan bukan aktivasi gate; dokumen `writer gate` dasar sebelumnya hanya mengizinkan `CAFE_OUT`, sedangkan extension ini memperluas pengecualian `FROZEN_OUT` dan `FINISHED_IN` **pada database pengujian yang terpisah**.
+
 ## Pengaman sebelum boleh dipasang ke OS aktif
 **Jangan menjalankan SQL di Supabase produksi.** Secara khusus:
 1. Saat ini prosedur SQL memakai tanggal **2026-11-01 hanya sebagai batas minimum data UJI**. Itu bukan cutover yang disetujui Owner, dan HARUS diganti dengan pembacaan immutable `opening_snapshots` yang telah disahkan sebelum deploy mana pun.
