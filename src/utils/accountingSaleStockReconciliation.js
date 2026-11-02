@@ -62,7 +62,7 @@ const duplicateGuard = (rows, label) => {
  * not retroactively assigned to any sale based on date/quantity.
  */
 export function reconcileSaleStockSourceRows({
-  month, sales, saleItems, movements, orphanMovements = [],
+  month, sales, saleItems, movements, orphanMovements,
 }) {
   if (typeof month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
     throw new Error("Bulan rekonsiliasi tidak valid.");
@@ -78,6 +78,8 @@ export function reconcileSaleStockSourceRows({
     saleCount: sales.length,
     itemCount: saleItems.length,
     linkedMovementCount: movements.length,
+    linkedCafeOutWithoutSplitRefCount: 0,
+    linkedCafeOutWithSplitRefCount: 0,
     orphanMovementCount: orphanMovements.length,
     matchedSaleCount: 0,
     needsReviewSaleCount: 0,
@@ -128,6 +130,14 @@ export function reconcileSaleStockSourceRows({
     }
     if (!salesMap.has(saleId)) {
       throw new Error("Mutasi mengacu pada sales di luar dataset yang dimuat.");
+    }
+    if (row.movement_type === "CAFE_OUT") {
+      if (row.batch_split_id === null || row.batch_split_id === undefined) {
+        categories.linkedCafeOutWithoutSplitRefCount++;
+      } else {
+        safeId(row.batch_split_id, "Referensi split pada CAFE_OUT");
+        categories.linkedCafeOutWithSplitRefCount++;
+      }
     }
     const perSale = movementsBySale.get(saleId) ?? [];
     perSale.push(row);
