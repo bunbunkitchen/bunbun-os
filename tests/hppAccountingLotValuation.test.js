@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildBatchLotCostDraft, traceLotCostDraft,
+  buildBatchLotCostDraft, traceLotCostDraft, proposeSoldLotCogsDrafts,
 } from "../src/utils/accountingLotValuation.js";
 
 function fixture() {
@@ -310,4 +310,53 @@ test("pre-release sales and transfers are rejected even if quantity is available
   assert.throws(()=>traceLotCostDraft({lots,events:[
     event("early-convert","FROZEN_TO_FINISHED",lots[1].lotId,1,"2026-11-02"),
   ]}),/tanggal|urutan/i);
+});
+
+
+test("only confirmed sold lots generate cost-of-goods-sold draft journals",()=>{
+  const lots=draft().lots;
+  const events=[
+    event("freeze-1","FROZEN_TO_FINISHED",lots[1].lotId,2,"2026-11-07"),
+    event("ship-1","SHIP_TO_CAFE",lots[0].lotId,2,"2026-11-08"),
+    event("sold-1","SOLD_AT_CAFE",lots[0].lotId,1,"2026-11-09",123),
+    event("direct-1","DIRECT_SOLD",lots[1].lotId,1,"2026-11-09",124),
+  ];
+  const traced=traceLotCostDraft({lots,events});
+  const cogs=proposeSoldLotCogsDrafts(traced);
+  assert.equal(cogs.proposals.length,2);
+  assert.deepEqual(cogs.proposals[0].lines,[
+    {accountCode:"5010",debit:"750.00",credit:"0.00"},
+    {accountCode:"1240",debit:"0.00",credit:"750.00"},
+  ]);
+  assert.deepEqual(cogs.proposals[1].lines,[
+    {accountCode:"5010",debit:"1000.00",credit:"0.00"},
+    {accountCode:"1220",debit:"0.00",credit:"1000.00"},
+  ]);
+  assert.deepEqual(cogs.proposals.map(p=>p.sourceKey),[
+    "verified-cogs:123:sold-1","verified-cogs:124:direct-1",
+  ]);
+  assert.equal(cogs.totalDraftCogs,"1750.00");
+  assert.ok(cogs.proposals.every(p=>p.status==="DRAFT" &&
+    p.requiresVerifiedLotToSaleAllocation &&
+    p.evidenceFromClientNotAuthorized && p.requiresStockCheck &&
+    p.readyToPost===false && p.writesDatabase===false));
+});
+
+test("goods only consigned, frozen or returned cannot generate any COGS proposal",()=>{
+  const lots=draft().lots;
+  const traced=traceLotCostDraft({lots,events:[
+    event("freeze-1","FROZEN_TO_FINISHED",lots[1].lotId,2,"2026-11-07"),
+    event("ship-1","SHIP_TO_CAFE",lots[0].lotId,2,"2026-11-08"),
+    event("return-1","RETURN_FROM_CAFE",lots[0].lotId,1,"2026-11-09"),
+  ]});
+  const result=proposeSoldLotCogsDrafts(traced);
+  assert.equal(result.proposals.length,0);
+  assert.equal(result.totalDraftCogs,"0.00");
+  assert.equal(result.actualHppApproved,false);
+});
+
+test("COGS draft generation refuses a fake posted ledger or incomplete trace",()=>{
+  assert.throws(()=>proposeSoldLotCogsDrafts({events:[],readyToPost:true,writesDatabase:false,
+    sourceCompletelyVerified:false}),/belum diposting/i);
+  assert.throws(()=>proposeSoldLotCogsDrafts(null),/belum diposting/i);
 });
