@@ -18,6 +18,9 @@ Contoh satu jenis Original Salt Bread dibawa ke The Public Coffee sebanyak 8 pcs
 
 Selalu `writesDatabase:false`, `readyToPost:false`, `sourceBalanceVerified:false`, `ownerApprovalVerified:false`, `createsSale:false`, `createsCogs:false`. **Data availableQty yang diinput browser belum bukti fisik/approval.**
 
+### A2. Penghubung rencana lot ke backend tepercaya (tanpa request jaringan)
+`src/utils/accountingLotReleaseTransport.js` (`buildLotReleaseServerRequest`) mengubah rencana lot menjadi payload yang kompatibel dengan prosedur atomik: tanggal, tujuan, operation key, productId, qty dan alokasi lot. Adapter memvalidasi ulang total/duplikasi dan **tidak pernah menyertakan** `actor_id`, harga, kas atau status persetujuan. Karena ini hanya adapter pure JS, ia **tidak memanggil Supabase** dan tidak membuat pengeluaran stok. Backend harus melakukan pengecekan login, saldo fisik, cutover dan sumber lot ulang.
+
 ### B. Prototype PostgreSQL atomik, private dan tertutup
 `docs/sql/accounting-lot-release-staging.sql` adalah **desain SQL yang berjalan hanya pada container PostgreSQL sementara di GitHub Actions**, bukan migrasi Supabase siap deploy.
 
@@ -35,6 +38,8 @@ Fungsi privat `bunbun_accounting.record_lot_assigned_release` (SECURITY INVOKER,
 6. `operation_key` yang sama dengan fingerprint dan Owner yang sama mengembalikan hasil lama; bila payload berubah, ditolak. Recorded release dan alokasi tidak boleh diedit/hapus diam-diam.
 
 ### C. Pengujian CI isolated
+`tests/hppNewLotReleasePlan.test.js` menguji alokasi dua lot per produk, rencana stok minus, tanggal/cutover, duplikasi, dan larangan menganggap kiriman sebagai penjualan. `tests/hppLotReleaseTransport.test.js` menguji request mapping serta penolakan spoofing/approval palsu.
+
 `tests/sql/accounting-lot-release-bootstrap.sql` membuat contoh public products/splits/stock hanya di database disposable. `tests/sql/accounting-lot-release-e2e.sql` memeriksa:
 - Pengeluaran dua produk sekaligus, dengan produk pertama dibagi dari dua lot.
 - Replay operation key tidak mengurangi stok dua kali.
