@@ -292,6 +292,51 @@ begin
    raise exception 'Failed forgery left orphan movement';
  end if;
 
+
+ -- Protect position tables themselves: a privileged client cannot forge
+ -- stocks by editing available_qty without creating evidence-backed movement.
+ begin
+   update bunbun_accounting.finished_lot_positions
+   set available_qty=available_qty-1 where lot_key=v_new_key;
+   execute 'SET CONSTRAINTS verify_unified_finished_position_commit IMMEDIATE';
+   raise exception 'UNEXPECTED SUCCESS direct finished lot stock forgery';
+ exception when others then
+   if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
+   if sqlerrm not like '%cannot change without matching lot allocations%' then raise; end if;
+ end;
+ begin
+   update bunbun_accounting.finished_lot_positions
+   set original_qty=original_qty+1 where lot_key=v_new_key;
+   raise exception 'UNEXPECTED SUCCESS edited source lot original cost/qty';
+ exception when others then
+   if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
+   if sqlerrm not like '%provenance and original quantity are immutable%' then raise; end if;
+ end;
+ begin
+   delete from bunbun_accounting.finished_lot_positions
+   where lot_key=v_new_key;
+   raise exception 'UNEXPECTED SUCCESS deleted source lot';
+ exception when others then
+   if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
+   if sqlerrm not like '%cannot be deleted%' then raise; end if;
+ end;
+ begin
+   update bunbun_accounting.frozen_lot_positions
+   set available_qty=1 where source_split_id=v_frozen;
+   execute 'SET CONSTRAINTS verify_unified_frozen_position_commit IMMEDIATE';
+   raise exception 'UNEXPECTED SUCCESS direct frozen lot stock forgery';
+ exception when others then
+   if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
+   if sqlerrm not like '%cannot change without recorded conversion%' then raise; end if;
+ end;
+ -- Both lot positions and public movement ledgers must still reconcile.
+ if (select sum(available_qty) from bunbun_accounting.finished_lot_positions
+     where product_id=1)<>13 or
+    (select available_qty from bunbun_accounting.frozen_lot_positions
+     where source_split_id=v_frozen)<>0 then
+   raise exception 'Failed lot position forgery leaked quantity changes';
+ end if;
+
  raise notice 'PASS: 9 unified stock writer families, 7 movement types, batch shaping→frozen→baking→single/multi cafe→sale→return→edit→adjustment IN/OUT; exact positions=movement, reject excluded, no HPP/cash posted';
 end $all$;
 reset role;
