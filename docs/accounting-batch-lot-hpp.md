@@ -16,6 +16,9 @@
 - `FINISHED_IN`/`FROZEN_IN` root harus cocok persis dengan hasil produksi layak dan product_id. Split turunan `source_split_id` dikecualikan dari produksi bahan baru.
 - Setiap lot hasilnya berisi quantity, tanggal release, source movement ID, lokasi awal, dan **nilai draft**, bukan HPP yang disahkan.
 - `traceLotCostDraft`: memindahkan nilai persediaan beserta jumlah dari FROZEN→FINISHED→CAFE, retur CAFE→FINISHED, dan hanya mencatat COGS untuk `SOLD_AT_CAFE`/`DIRECT_SOLD` dengan bukti sale ID.
+- `proposeSoldLotCogsDrafts`: hanya `SOLD_AT_CAFE` dan `DIRECT_SOLD` dari lot bernilai yang membuat **usulan** Dr HPP Terjual (5010) / Cr Persediaan Titipan (1240) atau Cr Produk Jadi (1220). Mutasi FROZEN→FINISHED, kirim titipan, dan retur **tidak** menghasilkan COGS.
+- Setiap usulan COGS punya source key `verified-cogs:<saleId>:<movementId>` untuk anti-duplikasi ketika backend posting kelak dibangun. Claim bukti tetap bukan persetujuan Owner sah; status selalu DRAFT, `readyToPost:false`.
+
 - Perhitungan proporsional biaya lot menggunakan perkalian BigInt atas nilai sen, dan menyisakan sen terakhir ke unit terakhir agar **total biaya awal = persediaan tersisa + HPP terjual** secara tepat.
 - Mutasi dengan jumlah berlebih, sale ID duplikat dalam lot, tanggal sebelum release/urutan salah, bukti review kosong, atau transfer yang keliru diberi error; transaksi tidak ditulis.
 
