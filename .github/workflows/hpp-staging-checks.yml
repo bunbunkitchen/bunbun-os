@@ -266,6 +266,17 @@ jobs:
           PGDATABASE=bunbun_single_cafe_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
           PGDATABASE=bunbun_single_cafe_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-single-cafe-lot-staging.sql
           PGDATABASE=bunbun_single_cafe_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-single-cafe-lot-e2e.sql
+      - name: Verify finished-product stock adjustments preserve actual lot sources without cash/HPP writes
+        run: |
+          createdb bunbun_product_adjust_ci
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-concurrency-seed.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-staging.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-product-adjustment-e2e.sql
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
