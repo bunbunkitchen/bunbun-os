@@ -69,6 +69,13 @@ Fungsi privat `bunbun_accounting.record_lot_assigned_release` (SECURITY INVOKER,
 - Status teknik sekarang **3 dari 9 jalur mempunyai prototipe**, **0 dari 9 terintegrasi ke aplikasi aktif**. Pembuatan frozen root dari shaping, pembaruan status/akumulasi batch induk, penjualan, pembatalan, retur, penyesuaian stok, biaya aktual dan saldo awal resmi masih perlu integrasi.
 - Ini bukan migrasi Supabase siap pakai dan bukan aktivasi gate; dokumen `writer gate` dasar sebelumnya hanya mengizinkan `CAFE_OUT`, sedangkan extension ini memperluas pengecualian `FROZEN_OUT` dan `FINISHED_IN` **pada database pengujian yang terpisah**.
 
+## TAHAP TERBARU — 9/9 PROTOTIPE, BUKAN 9/9 INTEGRASI
+- `docs/accounting-cafe-and-adjustment-lots.md`: pengeluaran satu produk ke kafe menggunakan writer multi-lot yang sama; Stock Adjustment OUT/IN menggunakan ledger lot tersendiri dengan jejak sumber dan bukti. Penyesuaian IN untuk sementara hanya membalik OUT sebelumnya yang sama persis; surplus stok tanpa asal tervalidasi masih diblokir.
+- `tests/sql/accounting-single-cafe-lot-e2e.sql` dan `tests/sql/accounting-product-adjustment-e2e.sql` menguji stok, provenance, idempotensi, penolakan alokasi salah, biaya dan kas tidak diubah.
+- `tests/sql/accounting-adjustment-race.sh` menguji 2 operator berebut 4 pcs dari satu lot berisi 6 pcs; transaksi kedua tertolak tanpa orphan record.
+- **Kesiapan versi prototipe kini 9 dari 9 jalur**, namun **0 jalur terintegrasi ke aplikasi atau Supabase yang sedang aktif**. Semua SQL prototype masih berada di berbagai database disposable CI dengan beberapa definisi writer gate alternatif; **belum menjadi satu migrasi aman**.
+- Pernyataan angka prototipe 3/9 atau 4/9 pada bagian *riwayat milestone sebelumnya* di bawah adalah status historis, bukan status terbaru.
+
 ## Pengaman sebelum boleh dipasang ke OS aktif
 **Jangan menjalankan SQL di Supabase produksi.** Secara khusus:
 1. Saat ini prosedur SQL memakai tanggal **2026-11-01 hanya sebagai batas minimum data UJI**. Itu bukan cutover yang disetujui Owner, dan HARUS diganti dengan pembacaan immutable `opening_snapshots` yang telah disahkan sebelum deploy mana pun.
