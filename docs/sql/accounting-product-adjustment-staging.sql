@@ -11,6 +11,11 @@
 -- No financial posting and no cash event. Outbound losses might require
 -- a journal later; financial report remains blocked until reconciled.
 
+-- The minimal PostgreSQL stock fixture predates the real Bunbun split column.
+-- A real Bunbun project already has batch_split_id; this is CI compatibility.
+alter table public.product_stock_movements
+  add column if not exists batch_split_id bigint;
+
 alter table public.product_stock_movements
   drop constraint if exists product_stock_movements_movement_type_check;
 alter table public.product_stock_movements
