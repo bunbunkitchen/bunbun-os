@@ -320,6 +320,17 @@ export default function CutoverPreparation() {
                 {computed.result.issues.length > 8 && <p className="mt-2 text-xs">Masih ada {computed.result.issues.length - 8} item lain.</p>}
               </div>
             )}
+            {computed.result?.warnings.length > 0 && (
+              <div className="mt-3 rounded-lg border border-[#D9D8D0] bg-[#F1F3ED] p-3">
+                <p className="text-sm font-semibold">Catatan ketidaksesuaian data lama (tidak menghalangi draft saldo awal baru):</p>
+                <ul className="mt-2 list-disc pl-5 text-sm">
+                  {computed.result.warnings.slice(0, 6).map((warning, index) => <li key={index}>{warning}</li>)}
+                </ul>
+                {computed.result.warnings.length > 6 && (
+                  <p className="mt-2 text-xs">Masih ada {computed.result.warnings.length - 6} catatan historis lain.</p>
+                )}
+              </div>
+            )}
             <div className="mt-4 flex flex-wrap gap-2">
               <button type="button" onClick={exportDraft}
                 className="rounded-lg bg-[#595E48] px-4 py-2 text-sm font-semibold text-white">
