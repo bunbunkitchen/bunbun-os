@@ -24,6 +24,7 @@ on:
       - "docs/sql/accounting-posting-staging.sql"
       - "docs/sql/accounting-reports-staging.sql"
       - "tests/sql/accounting-*.sql"
+      - "tests/sql/accounting-*.mjs"
       - "src/routes/AppRoutes.jsx"
       - "src/components/layout/Sidebar.jsx"
       - "tests/hpp*.test.js"
@@ -95,6 +96,11 @@ jobs:
           PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-posting-staging.sql
           PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-reports-staging.sql
           PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-bakery-lifecycle.sql
+      - name: Verify Owner report endpoint SQL and exact-cent reconciliation against PostgreSQL
+        run: |
+          node tests/sql/accounting-owner-report-integration.mjs emit > /tmp/bunbun-owner-report-ci.sql
+          PGDATABASE=bunbun_lifecycle_ci psql -X -q -A -t -v ON_ERROR_STOP=1 -f /tmp/bunbun-owner-report-ci.sql > /tmp/bunbun-owner-report-ci.json
+          node tests/sql/accounting-owner-report-integration.mjs assert /tmp/bunbun-owner-report-ci.json
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
