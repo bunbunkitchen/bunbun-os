@@ -14,7 +14,7 @@ export const STOCK_WRITER_COVERAGE = Object.freeze([
     "movementTypes": [
       "FROZEN_OUT"
     ],
-    "status": "NOT_INTEGRATED"
+    "status": "PROTOTYPE_ONLY"
   },
   {
     "rpc": "record_baking_result",
@@ -22,7 +22,7 @@ export const STOCK_WRITER_COVERAGE = Object.freeze([
     "movementTypes": [
       "FINISHED_IN"
     ],
-    "status": "NOT_INTEGRATED"
+    "status": "PROTOTYPE_ONLY"
   },
   {
     "rpc": "record_cafe_deposit",
