@@ -36,6 +36,8 @@ test("perfect sale/product/quantity links are traceable, NOT confirmed lot or ac
   assert.equal(r.summary.saleCount, 2);
   assert.equal(r.summary.itemCount, 3);
   assert.equal(r.summary.linkedMovementCount, 3);
+  assert.equal(r.summary.linkedCafeOutWithoutSplitRefCount,3);
+  assert.equal(r.summary.linkedCafeOutWithSplitRefCount,0);
   assert.equal(r.summary.itemUnitCount, 5);
   assert.equal(r.summary.sourceLinkedUnitCount, 5);
   assert.equal(r.summary.matchedSaleCount, 2);
@@ -203,4 +205,21 @@ test("the audit is a pure function and does not mutate the Supabase rows", () =>
   const r = reconcileSaleStockSourceRows(f);
   assert.equal(JSON.stringify(f), before);
   assert.equal(r.writesDatabase, false);
+});
+
+
+test("missing orphan stock dataset is not silently interpreted as zero", () => {
+  const f=fixture();
+  delete f.orphanMovements;
+  assert.throws(() => reconcileSaleStockSourceRows(f), /belum dimuat/);
+});
+
+test("an explicit split ID is a trace hint, NOT independent proof of sold lot HPP", () => {
+  const f=fixture();
+  f.movements[0].batch_split_id=101;
+  const r=reconcileSaleStockSourceRows(f);
+  assert.equal(r.summary.linkedCafeOutWithoutSplitRefCount,2);
+  assert.equal(r.summary.linkedCafeOutWithSplitRefCount,1);
+  assert.equal(r.sales[0].lotSourceVerified,false);
+  assert.equal(r.confirmedActualHpp,false);
 });
