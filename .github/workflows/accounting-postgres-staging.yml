@@ -1,0 +1,49 @@
+name: Accounting ledger — isolated PostgreSQL
+
+on:
+  pull_request:
+    paths:
+      - "docs/sql/accounting-schema-review.sql"
+      - "docs/sql/accounting-posting-staging.sql"
+      - "tests/sql/accounting-*.sql"
+      - ".github/workflows/accounting-postgres-staging.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-staging:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: bunbun_ci_only
+          POSTGRES_DB: bunbun_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bunbun_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: bunbun_ci_only
+      PGDATABASE: bunbun_ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Prepare isolated Supabase-like role fixtures
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+      - name: Create reviewed private accounting schema in CI database only
+        run: psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-schema-review.sql
+      - name: Add staging-only posting routine and immutability guards
+        run: psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-posting-staging.sql
+      - name: Verify posting and blocking cases in real PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-posting-e2e.sql
