@@ -21,7 +21,9 @@ export function assessBatchLotSources({ batch, materials, splits, stockMovements
       issues.push("Mutasi produk duplikat; periksa id " + row.id + ".");
     }
     ids.add(asId(row.id));
-    if (row.is_deleted === true || !TYPES.has(row.movement_type) ||
+    if (row.is_deleted === true) {
+      issues.push("Mutasi produk terhapus tidak dapat menjadi sumber audit.");
+    } else if (!TYPES.has(row.movement_type) ||
       !splitIds.has(asId(row.batch_split_id))) {
       issues.push("Mutasi produk tidak cocok dengan split atau status aktif.");
     }
