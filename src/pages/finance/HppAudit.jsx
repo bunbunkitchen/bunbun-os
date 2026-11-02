@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getMonthlyHppAudit } from "../../services/hppAuditService";
-import { getBatchCostingSnapshot } from "../../services/batchCostingReadService";
+import { getBatchLotSourceAudit } from "../../services/accountingBatchLotReadService";
 import HistoricalInventoryAudit from "../../components/hpp/HistoricalInventoryAudit";
 
 const rupiah = n => Number(n || 0).toLocaleString("id-ID", {
@@ -46,7 +46,7 @@ export default function HppAudit() {
     setBatchBusy(true);
     setBatchError("");
     setBatchInfo(null);
-    try { setBatchInfo(await getBatchCostingSnapshot(chosenId)); }
+    try { setBatchInfo(await getBatchLotSourceAudit(chosenId)); }
     catch (err) { setBatchError(err.message || "Gagal memuat batch."); }
     finally { setBatchBusy(false); }
   }
@@ -168,6 +168,40 @@ export default function HppAudit() {
           <p>Bahan belum bernilai: {batchInfo.missingMaterialValues.length} baris</p>
           <p>Split: {batchInfo.splits.length} baris</p>
           <p>Status audit: {batchInfo.costingStatus} (bukan HPP final)</p>
+          {batchInfo.lotAudit && <div className="mt-4 space-y-3 border-t border-[#D4D9D0] pt-4">
+            <h3 className="font-bold text-[#4E5D48]">Penelusuran Lot Asal & Frozen</h3>
+            <p>Split produksi asal: <strong>{batchInfo.lotAudit.rootSplitCount}</strong> ·
+              Split turunan frozen: <strong>{batchInfo.lotAudit.derivedSplitCount}</strong>
+            </p>
+            <p>Mutasi perpindahan frozen terdeteksi: <strong>{batchInfo.lotAudit.otherStockMovementCount}</strong>.
+              Mutasi tersebut tidak dianggap produksi baru atau HPP terjual.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[500px] text-xs">
+                <thead><tr className="border-b text-left">
+                  <th className="py-2">Split</th><th>Lokasi asal</th>
+                  <th className="text-right">Qty layak</th><th className="text-right">Mutasi stok</th>
+                  <th className="pl-3">Cocok?</th>
+                </tr></thead>
+                <tbody>{batchInfo.lotAudit.releaseRows.map(row => <tr key={row.splitId} className="border-b">
+                  <td className="py-2">#{row.splitId}</td>
+                  <td>{row.route === "FROZEN" ? "Frozen" : "Produk jadi"}</td>
+                  <td className="text-right">{row.qtyExpected ?? "?"}</td>
+                  <td className="text-right">{row.qtyReleased ?? "?"}</td>
+                  <td className="pl-3">{row.sourceQtyConfirmed ? "Sesuai" : "Perlu verifikasi"}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+            <p className="font-semibold text-amber-900">
+              Nilai HPP dan biaya produk terjual: belum tersedia sebagai angka aktual.
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-amber-900">
+              {batchInfo.lotAudit.issues.map((message,idx) => <li key={idx}>{message}</li>)}
+            </ul>
+            <p className="text-xs text-[#777A6D]">
+              Audit ini hanya membaca catatan split dan mutasi stok. Alokasi biaya bahan, tenaga kerja,
+              overhead, reject serta barang benar-benar terjual tetap memerlukan bukti yang disahkan.
+            </p>
+          </div>}
           {batchInfo.warnings?.length > 0 && <ul className="mt-2 list-disc pl-5 text-amber-900">
             {batchInfo.warnings.map((warning, idx) => <li key={idx}>{warning}</li>)}
           </ul>}
