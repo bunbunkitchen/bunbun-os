@@ -241,6 +241,7 @@ jobs:
           PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-cancel-staging.sql
           PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-edit-staging.sql
           PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-sales-lot-e2e.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-sales-edit-e2e.sql
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
