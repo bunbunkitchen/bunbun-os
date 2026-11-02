@@ -92,7 +92,7 @@ Advisor: 21 informasi `rls_enabled_no_policy` pada tabel private disengaja untuk
 ### Batas hasil dan pekerjaan berikutnya
 Ini memvalidasi mesin ledger dan sembilan keluarga stock writer pada skema asli. Belum memvalidasi seluruh integrasi UI/API aplikasi, dua koneksi bersamaan pada cloud, pengiriman sumber transaksi ke jurnal otomatis, perhitungan unit cost aktual atau laporan Owner live. CI concurrency lama tidak diklaim sebagai tes cloud. Edge readiness tetap `mayPost=false`; endpoint posting dan tampilan laba aktual belum diaktifkan. Tidak ada perubahan produksi atau merge main.
 
-Sebelum cutover: audit 20 warning legacy menurut peran; sambungkan backend/UI staging dan uji konkurensi cloud; lengkapi opname fisik, bukti invoice/biaya dan saldo awal yang disahkan Owner. Jangan memindahkan nilai simulasi atau mengaktifkan pelacakan produksi dari hasil ini.
+Sebelum cutover: audit 16 warning legacy menurut peran; sambungkan backend/UI staging dan uji konkurensi cloud; lengkapi opname fisik, bukti invoice/biaya dan saldo awal yang disahkan Owner. Jangan memindahkan nilai simulasi atau mengaktifkan pelacakan produksi dari hasil ini.
 
 
 ## Follow-up security ACL review — 2026-11-02
@@ -102,4 +102,13 @@ The remaining 16 include application RPCs called by the frontend, role helper fu
 
 The three-function ACL change is recorded in `docs/sql/staging-authenticated-trigger-rpcs.sql`. No application data changed. Production was not modified.
 
-The internal assertion helper `assert_frozen_flow_operator()` was also removed as a direct client RPC (it returns the caller ID and is used internally by SECURITY DEFINER operational procedures). The definer procedures execute nested calls as their owner, so this grant removal does not change their frontend RPC contract. It has no attached trigger. The current `authenticated` advisor count is 16; function ACL verification and nested real-login regression remain the next check.
+The internal assertion helper `assert_frozen_flow_operator()` was also removed as a direct client RPC (it returns the caller ID and is used internally by SECURITY DEFINER operational procedures). The definer procedures execute nested calls as their owner, so this grant removal does not change their frontend RPC contract. It has no attached trigger. The current `authenticated` advisor count is 16; the regression result is recorded below.
+
+
+## Live Auth RPC regression after ACL tightening — 2026-11-02
+- Synthetic users signed in through Supabase Auth as Owner, Baker and Helper; signup metadata requesting Owner still created Helper before the test admin assigned roles.
+- All three roles returned the expected `is_owner`, `is_baker`, `is_owner_or_baker`, and `is_owner_baker_or_helper` values and could read the empty finished-stock balance.
+- Owner-only product adjustment, ingredient adjustment and non-purchase stock RPCs rejected Baker and Helper with the Owner guard. Owner requests with deliberately invalid quantities/dates reached validation and failed before writes.
+- All three authenticated roles could reach an operational cafe-deposit RPC, which rejected zero quantity before writes. This confirms its nested call to the now non-callable `assert_frozen_flow_operator()` still works inside the SECURITY DEFINER procedure.
+- Direct RPC to `assert_frozen_flow_operator()` was denied to every role. Test users were deleted and the temporary Edge test endpoint returned 410. Final counts: Auth users/profiles/stock movements/sales/inventory transactions = 0; lot gate OFF.
+- Supabase advisor remains at 16 authenticated SECURITY DEFINER warnings. Inventory read is intentionally visible to all signed-in kitchen roles. The remaining live application RPCs were not all exercised with successful writes because staging contains no production-like records; further per-workflow writer testing is needed before any additional ACL changes.
