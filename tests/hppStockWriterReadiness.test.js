@@ -27,7 +27,7 @@ test("every stock writer tracked in migration SQL is explicitly listed",()=>{
 test("the readiness snapshot cannot certify cutover or production readiness",()=>{
   const snapshot=inspectStockWriterReadiness();
   assert.equal(snapshot.totalWriters,9);
-  assert.equal(snapshot.prototypeWriters,4);
+  assert.equal(snapshot.prototypeWriters,7);
   assert.equal(snapshot.liveIntegratedWriters,0);
   assert.equal(snapshot.cutoverMayBeActivated,false);
   assert.equal(snapshot.writesDatabase,false);
@@ -58,8 +58,20 @@ test("shaping, frozen conversion, baking and multi-product release are CI protot
   assert.deepEqual(prototypes.map(x=>x.rpc),[
     "record_shaping_split","release_frozen_stock",
     "record_baking_result","record_multi_product_release",
+    "record_sale_transaction","update_sale_transaction","delete_sale_transaction",
   ]);
   assert.ok(prototypes.every(x=>x.liveIntegrated===false));
   assert.equal(result.cutoverMayBeActivated,false);
   assert.equal(result.liveIntegratedWriters,0);
+});
+
+
+test("sales stock writers have isolated reversals but are never marked live",()=>{
+  const result=inspectStockWriterReadiness();
+  const sales=result.writers.filter(x=>[
+    "record_sale_transaction","update_sale_transaction","delete_sale_transaction",
+  ].includes(x.rpc));
+  assert.equal(sales.length,3);
+  assert.ok(sales.every(x=>x.status==="PROTOTYPE_ONLY" && x.liveIntegrated===false));
+  assert.equal(result.cutoverMayBeActivated,false);
 });
