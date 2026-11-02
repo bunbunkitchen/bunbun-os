@@ -30,7 +30,7 @@ export const STOCK_WRITER_COVERAGE = Object.freeze([
     "movementTypes": [
       "CAFE_OUT"
     ],
-    "status": "NOT_INTEGRATED"
+    "status": "PROTOTYPE_ONLY"
   },
   {
     "rpc": "record_multi_product_release",
@@ -72,7 +72,7 @@ export const STOCK_WRITER_COVERAGE = Object.freeze([
       "ADJUSTMENT_IN",
       "ADJUSTMENT_OUT"
     ],
-    "status": "NOT_INTEGRATED"
+    "status": "PROTOTYPE_ONLY"
   }
 ]);
 export function inspectStockWriterReadiness(){return {status:"BLOCKED_PRE_CUTOVER",totalWriters:STOCK_WRITER_COVERAGE.length,prototypeWriters:STOCK_WRITER_COVERAGE.filter(x=>x.status==="PROTOTYPE_ONLY").length,liveIntegratedWriters:0,writers:STOCK_WRITER_COVERAGE.map(x=>({...x,movementTypes:[...x.movementTypes],liveIntegrated:false})),blockers:["Prosedur stok lama belum terhubung ke pembukuan lot atomik.","Saldo awal fisik dan nilai persediaan belum disahkan Owner.","Autentikasi Owner dan seluruh jalur stok belum diuji di Supabase staging terpisah."],cutoverMayBeActivated:false,writesDatabase:false};}
