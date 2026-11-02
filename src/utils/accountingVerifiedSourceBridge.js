@@ -32,7 +32,8 @@ function money(value) {
   return String(whole) + "." + String(value % 100).padStart(2, "0");
 }
 function id(value, label) {
-  if ((typeof value !== "number" && typeof value !== "string") ||
+  if ((typeof value === "number" && !Number.isSafeInteger(value)) ||
+    (typeof value !== "number" && typeof value !== "string") ||
     !/^[1-9]\d{0,15}$/.test(String(value))) {
     throw new Error("ID " + label + " tidak valid.");
   }
@@ -181,8 +182,13 @@ export function buildVerifiedAccountingSourceBridge({
       if (!approvedSales.has(saleId)) {
         throw new Error("Setoran harus ditautkan ke penjualan hak Bunbun yang terverifikasi.");
       }
+      const linkedSale = maps.sales.get(saleId);
+      if (row.tanggal < linkedSale.sale_date) {
+        throw new Error("Tanggal setoran tidak boleh mendahului tanggal penjualan terverifikasi.");
+      }
       const moneyValue = cents(allocation.amount, "Alokasi setoran");
       allocated += moneyValue;
+      if (!Number.isSafeInteger(allocated)) throw new Error("Total alokasi setoran melebihi batas aman.");
       const newTotal = (receivablePayments.get(saleId) || 0) + moneyValue;
       if (!Number.isSafeInteger(newTotal) || newTotal > approvedSales.get(saleId)) {
         throw new Error("Setoran melampaui piutang hak Bunbun yang benar-benar terverifikasi.");
@@ -250,6 +256,9 @@ export function buildVerifiedAccountingSourceBridge({
     if (row.purchase_id == null || String(row.purchase_id) !== invoiceId ||
       !approvedPurchases.has(invoiceId)) {
       throw new Error("Pembayaran harus cocok dengan purchase_id pembelian bahan terverifikasi.");
+    }
+    if (row.tanggal < maps.purchases.get(invoiceId).tanggal) {
+      throw new Error("Tanggal pembayaran tidak boleh mendahului tanggal faktur pembelian.");
     }
     if (!["1010", "1020"].includes(proof.cashAccount)) {
       throw new Error("Sumber kas/bank pembelian wajib diverifikasi.");
