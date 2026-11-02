@@ -1,0 +1,1 @@
+cutover_date,location_type,location_name,stock_type,source_batch_id,source_split_id,source_lot_ref,product_or_ingredient_id,physical_quantity,unit,verified_unit_cost_idr,extended_cost_idr,evidence_reference,physical_counter,owner_reviewer,reviewed_at,status,notes
