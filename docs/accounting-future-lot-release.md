@@ -43,6 +43,8 @@ Fungsi privat `bunbun_accounting.record_lot_assigned_release` (SECURITY INVOKER,
 `tests/sql/accounting-lot-release-bootstrap.sql` membuat contoh public products/splits/stock hanya di database disposable. `tests/sql/accounting-lot-release-e2e.sql` memeriksa:
 - Pengeluaran dua produk sekaligus, dengan produk pertama dibagi dari dua lot.
 - Replay operation key tidak mengurangi stok dua kali.
+- **Tes concurrency dua sesi PostgreSQL nyata:** transaksi A mengunci baris produk 1, transaksi B mencoba mengambil 6 unit dari lot yang sama ketika A masih memegang lock. Setelah A sukses, B harus tertolak; hanya satu `CAFE_OUT`, tidak ada lot minus, dan tidak ada operasi kedua yang tertinggal.
+- Skrip `tests/sql/accounting-lot-concurrency.sh`, `accounting-lot-concurrency-a.sql`, `accounting-lot-concurrency-b.sql` menjalankan pengujian dalam database disposable terpisah dari tes rollback biasa.
 - Overdraw stok pada produk kedua membatalkan perubahan produk pertama (atomic rollback).
 - Owner nonaktif/Baker ditolak.
 - Alokasi tidak tepat, lot duplikat, dan permintaan menyamarkan pengiriman sebagai penjualan ditolak.
