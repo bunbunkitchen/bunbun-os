@@ -15,6 +15,7 @@ Kode rumus bukan satu-satunya syarat. Laba harus memiliki bukti pendapatan hak B
 
 ## Yang G buat
 - `src/utils/accountingSaleStockReconciliation.js`: memeriksa `sales`, `sale_items`, dan `product_stock_movements` berdasarkan ID SALE + product_id, jumlah SKU, tanggal, subtotal vs total, dan `CAFE_OUT` tanpa sale_id. Tidak otomatis menghubungkan berdasarkan produk/tanggal saja.
+- Audit juga menghitung `linkedCafeOutWithoutSplitRefCount` dan `linkedCafeOutWithSplitRefCount`: referensi split yang tersedia tetap bukan pengesahan lot atau HPP. Data orphan harus lengkap, tidak boleh default kosong ketika query gagal.
 - `src/services/accountingSaleStockAuditService.js`: SELECT terpaginasikan, dengan count exact dan batas aman. Query sumber item/mutasi memakai `sale_id` dan dapat mempertahankan mutasi lintas tanggal, sedangkan orphan terfilter tanggal per bulan. Menolak data parsial dan kesalahan sumber.
 - `src/pages/finance/SaleLotTraceAudit.jsx`: halaman khusus Owner bernama **Audit Penjualan & Lot** (`/finance/sale-lot-audit`), menampilkan transaksi cocok vs perlu ditinjau, ringkasan jumlah item/stock, dan transaksi tanpa sale ID. Tidak ada angka HPP yang diisi sebagai estimasi.
 - `src/utils/accountingSaleLotAllocation.js`: fungsi `previewSaleToLotCogs` **mengharuskan referensi ekspilisit** dari movement stock ke event lot yang terjual, product ID cocok, sale ID cocok, tanggal cocok, qty tepat, bukti review eksplisit. Banyak lot boleh mengisi satu item/movement. Lot yang tidak teralokasi menjadi blocker, bukan nilai nol.
