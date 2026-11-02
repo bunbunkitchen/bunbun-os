@@ -87,6 +87,37 @@ values
  ('99999999-9999-4999-8999-999999999999',1,'1020',20000,0),
  ('99999999-9999-4999-8999-999999999999',2,'1120',0,20000);
 
+
+-- Additional negative fixtures: unbalanced money, forged reversal and mixed cash.
+insert into bunbun_accounting.journals
+ (id,period_id,posting_date,source_type,source_key,
+  operation_key,status,cash_flow_category,reversal_of)
+values
+ ('88888888-8888-4888-8888-888888888888',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ '2026-11-12','NORMAL','unbalanced:ci',
+ '88888888-0000-4000-8000-000000000000','DRAFT',null,null),
+ ('77777777-7777-4777-8777-777777777777',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ '2026-11-16','REVERSAL','forged-reversal:ci',
+ '77777777-0000-4000-8000-000000000000','DRAFT',null,
+ 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),
+ ('66666666-6666-4666-8666-666666666666',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ '2026-11-17','NORMAL','mixed-cash:ci',
+ '66666666-0000-4000-8000-000000000000','DRAFT','OPERATING',null);
+
+insert into bunbun_accounting.journal_lines
+ (journal_id,line_number,account_code,debit,credit)
+values
+ ('88888888-8888-4888-8888-888888888888',1,'1210',100,0),
+ ('88888888-8888-4888-8888-888888888888',2,'2010',0,90),
+ ('77777777-7777-4777-8777-777777777777',1,'1210',0,9999),
+ ('77777777-7777-4777-8777-777777777777',2,'2010',9999,0),
+ ('66666666-6666-4666-8666-666666666666',1,'1020',100,0),
+ ('66666666-6666-4666-8666-666666666666',2,'1010',0,80),
+ ('66666666-6666-4666-8666-666666666666',3,'4010',0,20);
+
 -- Verify grants before using service_role.
 do $checks$
 begin
@@ -172,6 +203,36 @@ begin
     raise exception 'Failed posting mutated draft status';
   end if;
 
+
+  begin
+    perform bunbun_accounting.post_reviewed_journal(
+      '88888888-8888-4888-8888-888888888888', v_active_owner);
+    raise exception 'UNEXPECTED SUCCESS: unbalanced journal';
+  exception when others then
+    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
+    if sqlerrm not like '%not balanced%' then raise; end if;
+  end;
+  begin
+    perform bunbun_accounting.post_reviewed_journal(
+      '77777777-7777-4777-8777-777777777777', v_active_owner);
+    raise exception 'UNEXPECTED SUCCESS: fraudulent reversal';
+  exception when others then
+    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
+    if sqlerrm not like '%exactly cancel%' then raise; end if;
+  end;
+  begin
+    perform bunbun_accounting.post_reviewed_journal(
+      '66666666-6666-4666-8666-666666666666', v_active_owner);
+    raise exception 'UNEXPECTED SUCCESS: mixed cash';
+  exception when others then
+    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
+    if sqlerrm not like '%Mixed cash%' then raise; end if;
+  end;
+  if (select count(*) from bunbun_accounting.journals
+      where source_key in ('unbalanced:ci','forged-reversal:ci','mixed-cash:ci')
+        and status <> 'DRAFT') <> 0 then
+    raise exception 'Failed posting must not mutate any invalid draft';
+  end if;
   -- POSTED header and lines are locked, even for service_role.
   begin
     update bunbun_accounting.journals
