@@ -30,6 +30,7 @@ on:
       - "docs/sql/accounting-lot-release-staging.sql"
       - "docs/sql/accounting-lot-writer-gate-staging.sql"
       - "docs/sql/accounting-frozen-baking-staging.sql"
+      - "docs/sql/accounting-shaping-batch-staging.sql"
       - "src/services/accountingSaleStockAuditService.js"
       - "src/pages/finance/SaleLotTraceAudit.jsx"
       - "src/utils/accountingBatchLotAudit.js"
@@ -198,6 +199,18 @@ jobs:
           PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
           PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-race-seed.sql
           PGDATABASE=bunbun_frozen_race_ci bash tests/sql/accounting-frozen-race.sh
+      - name: Verify shaping root and parent batch lifecycle with real PostgreSQL source splits
+        run: |
+          createdb bunbun_shaping_ci
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-bootstrap.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-shaping-batch-staging.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-e2e.sql
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
