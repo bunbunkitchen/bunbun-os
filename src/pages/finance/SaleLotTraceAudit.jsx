@@ -97,6 +97,8 @@ export default function SaleLotTraceAudit() {
             note="Tidak diperbaiki otomatis."/>
           <CountCard label="Stok keluar tanpa ID penjualan" value={audit.summary.orphanMovementCount}
             note="CAFE_OUT tanpa sale_id pada bulan yang dipilih."/>
+          <CountCard label="Stok keluar tanpa ID split produksi" value={audit.summary.linkedCafeOutWithoutSplitRefCount}
+            note="CAFE_OUT terkait penjualan yang belum memiliki referensi lot asal."/>
         </div>
         <section className="rounded-xl border bg-white p-4">
           <h2 className="font-semibold text-[#4F5D4A]">Jejak transaksi yang berhasil ditemukan</h2>
