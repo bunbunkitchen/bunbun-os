@@ -177,6 +177,7 @@ export function buildBatchLotCostDraft({
       initialLocation: route === "DIRECT" ? "FINISHED" : "FROZEN",
       qty: releasedQty, totalCost: cents(lotCents),
       sourceMovementId: String(releases[0].id),
+      releaseDate: releases[0].movement_date,
       costEvidenceRef: verifiedCosts.lots.find(item => String(item.splitId) === id).evidenceRef,
     });
   }
@@ -229,6 +230,9 @@ export function traceLotCostDraft({ lots, events }) {
     }
     const value = toJournalCents(lot.totalCost,"Nilai lot asal");
     if (!value) throw new Error("Lot tidak boleh bernilai nol.");
+    if (lot.releaseDate != null && !isValidIsoDate(lot.releaseDate)) {
+      throw new Error("Tanggal pelepasan lot tidak valid.");
+    }
     const initialLocation = lot.initialLocation;
     const slots = Object.fromEntries(locations.map(location => [location,{
       qty: location === initialLocation ? lot.qty : 0,
@@ -237,7 +241,7 @@ export function traceLotCostDraft({ lots, events }) {
     stocks.set(lot.lotId,{
       lotId:lot.lotId, productId:String(lot.productId), slots,
       originalQty:lot.qty, originalCost:value,
-      lastDate:null,
+      lastDate:lot.releaseDate ?? null,
     });
   }
   for (const event of events) {
