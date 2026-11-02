@@ -319,7 +319,8 @@ begin
    raise exception 'UNEXPECTED SUCCESS deleted source lot';
  exception when others then
    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
-   if sqlerrm not like '%cannot be deleted%' then raise; end if;
+   if sqlerrm not like '%cannot be deleted%'
+     and sqlerrm not like '%permission denied for table finished_lot_positions%' then raise; end if;
  end;
  begin
    update bunbun_accounting.frozen_lot_positions
