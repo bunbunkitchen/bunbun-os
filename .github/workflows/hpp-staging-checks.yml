@@ -20,6 +20,7 @@ on:
       - "src/pages/finance/OwnerBusinessHealth.jsx"
       - "src/components/accounting/**"
       - "src/utils/accountingBusinessHealth.js"
+      - "src/utils/accountingVerifiedSourceBridge.js"
       - "src/services/accountingBusinessHealthService.js"
       - "supabase/functions/accounting-owner-readiness/**"
       - "supabase/functions/accounting-owner-monthly-report/**"
@@ -57,7 +58,7 @@ jobs:
       - name: HPP unit tests
         run: node --test tests/hpp*.test.js
       - name: HPP lint
-        run: npx eslint src/utils/hppBatchAssessment.js src/utils/hppCostReview.js src/utils/hppMonthlyAllocation.js src/utils/hppHistoricalValuation.js src/utils/hppCutoverOpening.js src/utils/accountingOpeningJournal.js src/utils/accountingPostedReports.js src/utils/accountingEventProposals.js src/utils/accountingSourceReadiness.js src/services/accountingSourceReadinessService.js src/pages/finance/AccountingSourceReadiness.jsx src/pages/finance/OwnerBusinessHealth.jsx src/components/accounting/FinancialTrendChart.jsx src/utils/accountingBusinessHealth.js src/services/accountingBusinessHealthService.js supabase/functions/_shared/accountingOwnerReadiness.js supabase/functions/_shared/accountingStagingGuard.js supabase/functions/_shared/accountingOwnerMonthlyReport.js supabase/functions/_shared/accountingPrivateLedgerRead.js src/components/hpp/OpeningJournalPreview.jsx src/services/hppCutoverService.js src/pages/finance/CutoverPreparation.jsx src/services/hppHistoricalValuationService.js src/components/hpp/HistoricalInventoryAudit.jsx src/services/batchCostingReadService.js src/services/hppAuditService.js src/pages/finance/HppAudit.jsx src/routes/AppRoutes.jsx src/components/layout/Sidebar.jsx
+        run: npx eslint src/utils/hppBatchAssessment.js src/utils/hppCostReview.js src/utils/hppMonthlyAllocation.js src/utils/hppHistoricalValuation.js src/utils/hppCutoverOpening.js src/utils/accountingOpeningJournal.js src/utils/accountingPostedReports.js src/utils/accountingEventProposals.js src/utils/accountingSourceReadiness.js src/services/accountingSourceReadinessService.js src/pages/finance/AccountingSourceReadiness.jsx src/pages/finance/OwnerBusinessHealth.jsx src/components/accounting/FinancialTrendChart.jsx src/utils/accountingBusinessHealth.js src/utils/accountingVerifiedSourceBridge.js src/services/accountingBusinessHealthService.js supabase/functions/_shared/accountingOwnerReadiness.js supabase/functions/_shared/accountingStagingGuard.js supabase/functions/_shared/accountingOwnerMonthlyReport.js supabase/functions/_shared/accountingPrivateLedgerRead.js src/components/hpp/OpeningJournalPreview.jsx src/services/hppCutoverService.js src/pages/finance/CutoverPreparation.jsx src/services/hppHistoricalValuationService.js src/components/hpp/HistoricalInventoryAudit.jsx src/services/batchCostingReadService.js src/services/hppAuditService.js src/pages/finance/HppAudit.jsx src/routes/AppRoutes.jsx src/components/layout/Sidebar.jsx
       - name: Production build
         run: npm run build
 
