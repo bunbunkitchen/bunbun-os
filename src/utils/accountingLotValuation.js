@@ -57,6 +57,11 @@ export function buildBatchLotCostDraft({
     batch.is_deleted === true) {
     throw new Error("Batch harus Finished dan pemakaian bahan sudah tercatat.");
   }
+  if (batch.created_at &&
+    (!isValidIsoDate(String(batch.created_at).slice(0,10)) ||
+      String(batch.created_at).slice(0,10) < cutoverDate)) {
+    throw new Error("Batch sebelum cutover perlu saldo awal, bukan dihitung ulang sebagai produksi baru.");
+  }
   if (!materials.length || !splits.length) {
     throw new Error("Batch belum memiliki catatan bahan dan split produksi.");
   }
@@ -87,6 +92,9 @@ export function buildBatchLotCostDraft({
   }
   const roots = [...splitMap.values()].filter(split => split.source_split_id == null);
   const usableRoots = roots.filter(split => split.route === "DIRECT" || split.route === "FROZEN");
+  if (roots.some(split => !["DIRECT","FROZEN","REJECT"].includes(split.route))) {
+    throw new Error("Ada route split produksi yang belum memiliki klasifikasi HPP.");
+  }
   if (roots.length !== splitMap.size && [...splitMap.values()].some(split =>
       split.source_split_id != null && !splitMap.has(String(split.source_split_id)))) {
     throw new Error("Split turunan frozen harus memiliki split asal dalam batch sama.");
@@ -109,6 +117,9 @@ export function buildBatchLotCostDraft({
       throw new Error("Pemakaian bahan duplikat, bukan PRODUCTION_OUT, atau tidak dapat ditelusuri.");
     }
     originalLines.add(id);
+    if (!isValidIsoDate(line.transaction_date) || line.transaction_date < cutoverDate) {
+      throw new Error("Transaksi bahan sebelum cutover harus berasal dari saldo awal yang disahkan.");
+    }
     if (!matMap.has(id)) {
       throw new Error("Biaya pemakaian bahan #" + id + " belum diverifikasi; tidak boleh nol otomatis.");
     }
@@ -146,6 +157,16 @@ export function buildBatchLotCostDraft({
       String(releases[0].product_id) !== productId) {
       throw new Error("Mutasi " + expectedType + " split #" + id +
         " tidak cocok dengan pelepasan produk nyata.");
+    }
+    if (!isValidIsoDate(releases[0].movement_date) ||
+      releases[0].movement_date < cutoverDate) {
+      throw new Error("Pelepasan produk sebelum cutover memerlukan saldo awal.");
+    }
+    if (stockMovements.some(movement =>
+      String(movement.batch_split_id) === id &&
+      ["FINISHED_IN","FROZEN_IN"].includes(movement.movement_type) &&
+      movement.movement_type !== expectedType)) {
+      throw new Error("Split menghasilkan jenis stok masuk tidak sesuai route.");
     }
     const lotCents = allocMap.get(id);
     if (lotCents === 0) throw new Error("Biaya lot layak jual tidak boleh nol.");
