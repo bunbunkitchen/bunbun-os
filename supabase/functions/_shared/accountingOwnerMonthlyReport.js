@@ -6,6 +6,7 @@
  * approval from clients. No accounting write action is implemented here.
  */
 import { authorizeActiveOwner } from "./accountingOwnerReadiness.js";
+import { isValidIsoDate } from "../../../src/utils/hppCutoverOpening.js";
 
 const JSON_LIMIT_BYTES = 1024;
 
@@ -42,6 +43,7 @@ export function validatePostedFinancialSnapshot(row, expectedMonth) {
   if (!row || row.month !== expectedMonth ||
     !["OPEN", "CLOSED"].includes(row.periodStatus) ||
     row.openingApproved !== true ||
+    !isValidIsoDate(row.cutoverDate) || row.cutoverDate > expectedMonth + "-31" ||
     typeof row.incomeStatement !== "object" || !row.incomeStatement ||
     typeof row.cashFlow !== "object" || !row.cashFlow ||
     typeof row.financialPosition !== "object" || !row.financialPosition) {
@@ -67,6 +69,7 @@ export function validatePostedFinancialSnapshot(row, expectedMonth) {
   return {
     month: expectedMonth,
     periodStatus: row.periodStatus,
+    cutoverDate: row.cutoverDate,
     incomeStatement: Object.fromEntries(moneyKeys.incomeStatement.map(key => [key, income[key]])),
     cashFlow: Object.fromEntries(moneyKeys.cashFlow.map(key => [key, cash[key]])),
     financialPosition: Object.fromEntries(moneyKeys.financialPosition.map(key => [key, balance[key]])),
