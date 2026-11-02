@@ -60,7 +60,7 @@ from fixtures;
 
 with lines(seq,line_number,account_code,debit,credit) as (
  values
- (1,1,'1020',100000::numeric,0::numeric),
+ (1,1,'1020',1000000::numeric,0::numeric),
  (1,2,'1210',200000,0),
  (1,3,'3000',0,1200000),
  (2,1,'1210',150000,0),
