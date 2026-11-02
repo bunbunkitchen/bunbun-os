@@ -242,6 +242,17 @@ jobs:
           PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-edit-staging.sql
           PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-sales-lot-e2e.sql
           PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-sales-edit-e2e.sql
+      - name: Verify concurrent sales never double-spend same finished lot
+        run: |
+          createdb bunbun_sales_lot_race_ci
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-sales-bootstrap.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-lot-staging.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-create-staging.sql
+          PGDATABASE=bunbun_sales_lot_race_ci bash tests/sql/accounting-sale-race.sh
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
