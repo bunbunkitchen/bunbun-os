@@ -1,6 +1,6 @@
 # Bunbun OS — Rancangan Ledger Akuntansi Setelah Cutover
 
-Status: DESAIN UNTUK REVIEW, BUKAN MIGRASI DAN BUKAN AKTIVASI. Tidak ada SQL yang dijalankan.
+Status: DESAIN DAN KODE UJI STAGING. SQL hanya dijalankan di PostgreSQL sementara GitHub Actions, bukan di Supabase produksi atau project Supabase staging permanen. Belum ada migrasi dan bukan aktivasi.
 
 ## Tujuan
 Berikan fondasi untuk laba rugi, arus kas, neraca, margin produk, bonus staf, dan simulasi ekspansi yang bisa dipercaya. Mesin HPP historis tetap read-only; tanggal cutover dan saldo awal disahkan dahulu.
@@ -62,3 +62,18 @@ Berikan fondasi untuk laba rugi, arus kas, neraca, margin produk, bonus staf, da
 - Jangan menyamakan uang yang tersedia dengan keuntungan yang boleh dibagi.
 - Jangan mencampur omzet kafe sebelum bagi hasil dengan setoran bersih yang dicatat Owner.
 - Jangan melakukan posting jurnal sebelum saldo awal dan klasifikasi akuntansi disahkan.
+
+## Realisasi uji PostgreSQL sementara (2 November 2026)
+- docs/sql/accounting-schema-review.sql: proposal private schema bunbun_accounting dengan RLS dan grant terbatas untuk backend.
+- docs/sql/accounting-posting-staging.sql: fungsi SECURITY INVOKER post_reviewed_journal di private schema; bukan RPC publik.
+- tests/sql/accounting-staging-bootstrap.sql: role/auth/profiles tiruan HANYA untuk PostgreSQL sementara pada CI.
+- tests/sql/accounting-posting-e2e.sql: pengujian PostgreSQL nyata atas hak akses, Owner aktif, saldo awal approved, periode OPEN, debit-kredit, arus kas, reversal, idempotensi, immutability dan period CLOSED.
+- GitHub Actions: .github/workflows/accounting-postgres-staging.yml dan job accounting-postgres dalam HPP staging checks.
+- PostgreSQL CI berhasil TIDAK berarti semua tes Supabase RLS nyata, Edge Function dan cutover telah dilaksanakan.
+
+## Batas keamanan sebelum backend posting
+- Hanya backend terpercaya boleh menyimpan credential service_role; browser tidak pernah mengaksesnya.
+- Backend WAJIB memvalidasi session/JWT Owner aktif dan membuktikan actor_id berasal dari session itu. Parameter actor_id dari browser tidak boleh dipercaya.
+- Backend WAJIB mengecek bukti saldo awal, hak pendapatan Bunbun, source_key, invoice, jumlah/biaya persediaan, dan anti-replay.
+- Trigger internal PostgreSQL bukan pengganti otorisasi backend; service_role adalah principal istimewa.
+- SQL ini belum menjadi migrasi Supabase; tetap butuh uji RLS, grants, concurrency, settlement kafe, dan laporan end-to-end pada staging Supabase terpisah sebelum produksi.
