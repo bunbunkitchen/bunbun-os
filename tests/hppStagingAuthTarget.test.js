@@ -38,7 +38,7 @@ test("staging remote Auth test always refuses production and mismatched refs", (
       projectUrl: "https://amgyogvqyuxzdpjseqsi.supabase.co" },
     { ...valid, projectRef: "badstage" },
     { ...valid, projectUrl: "https://amgyogvqyuxzdpjseqsi.supabase.co" },
-    { ...valid, allowedOrigin: "https://staging.bunbun.example.evil.net" },
+    { ...valid, allowedOrigin: "https://staging.bunbun.example/path" },
     { ...valid, allowedOrigin: "http://staging.bunbun.example" },
     { ...valid, publishableKey: "sb_secret_leaked" },
     { ...valid, publishableKey: "anon.jwt.key" },
