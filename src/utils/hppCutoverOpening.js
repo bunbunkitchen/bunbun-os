@@ -121,6 +121,7 @@ export function evaluateCutoverDraft({
     throw new Error("Ringkasan saldo buku belum tersedia.");
   }
   const issues = [];
+  const warnings = [];
   const accounts = {};
   for (const item of OPENING_FINANCIAL_FIELDS) {
     const value = parseOptionalNonnegative(financial[item.key], item.label);
@@ -145,10 +146,10 @@ export function evaluateCutoverDraft({
     const difference = physicalQty !== null && item.bookQty !== null
       ? roundQuantity(physicalQty - item.bookQty) : null;
     if (difference !== null && Math.abs(difference) > 1e-6 && !varianceNote) {
-      issues.push(item.ingredientName + ": selisih stok fisik dengan buku perlu keterangan.");
+      warnings.push(item.ingredientName + ": selisih fisik dan buku historis belum diberi catatan.");
     }
     if (!item.isReliable) {
-      issues.push(item.ingredientName + ": saldo buku tidak dapat dipercaya; verifikasi mutasi.");
+      warnings.push(item.ingredientName + ": saldo buku historis bermasalah; gunakan stok opname terverifikasi sebagai dasar baru.");
     }
     return {
       ingredientId: item.ingredientId, nama: item.ingredientName,
@@ -160,7 +161,7 @@ export function evaluateCutoverDraft({
     };
   });
   if (review.unmatchedMovementIds?.length) {
-    issues.push("Ada mutasi tanpa bahan master/tanggal valid; cek riwayat sebelum cutover.");
+    warnings.push("Ada mutasi historis tanpa bahan master/tanggal valid; periksa sebagai catatan audit.");
   }
   const inventoryComplete = inventory.every(x => x.stockValue !== null);
   const accountsComplete = Object.values(accounts).every(x => x !== null);
@@ -180,7 +181,7 @@ export function evaluateCutoverDraft({
   return {
     version: 1, cutoverDate: review.cutoverDate,
     status: approvedByOwner && issues.length === 0 ? "DRAFT_REVIEW_COMPLETE" : "DRAFT_INCOMPLETE",
-    financial: accounts, inventory, balance, issues,
+    financial: accounts, inventory, balance, issues, warnings,
     canActivate: false, writesDatabase: false,
   };
 }
