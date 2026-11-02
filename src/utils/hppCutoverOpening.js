@@ -13,6 +13,7 @@ export const OPENING_FINANCIAL_FIELDS = [
   { key: "cash", label: "Kas tunai hasil hitung fisik", type: "asset" },
   { key: "bank", label: "Saldo bank menurut rekening", type: "asset" },
   { key: "receivables", label: "Piutang yang benar-benar belum diterima", type: "asset" },
+  { key: "workInProgress", label: "Produksi dalam proses / WIP (nilai biaya)", type: "asset" },
   { key: "finishedGoods", label: "Persediaan produk jadi (nilai HPP)", type: "asset" },
   { key: "frozenGoods", label: "Persediaan produk frozen (nilai HPP)", type: "asset" },
   { key: "consignmentGoods", label: "Produk titip di kafe belum terjual (nilai HPP)", type: "asset" },
