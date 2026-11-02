@@ -53,7 +53,9 @@ export function checkLiveReadinessResponse({
       throw new Error("Auth smoke " + role + ": must be Owner-only");
     }
   } else if (role === "anonymous" || role === "forged-token") {
-    if (!["AUTH_REQUIRED","INVALID_SESSION"].includes(response.code)) {
+    // Supabase Edge Gateway verify_jwt may reject BEFORE the function runs,
+    // using an integer 401 code instead of the handler's stable error code.
+    if (!["AUTH_REQUIRED","INVALID_SESSION",401,"401"].includes(response.code)) {
       throw new Error("Auth smoke " + role + ": must reject missing/invalid Auth");
     }
   }
