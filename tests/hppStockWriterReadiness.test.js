@@ -27,7 +27,7 @@ test("every stock writer tracked in migration SQL is explicitly listed",()=>{
 test("the readiness snapshot cannot certify cutover or production readiness",()=>{
   const snapshot=inspectStockWriterReadiness();
   assert.equal(snapshot.totalWriters,9);
-  assert.equal(snapshot.prototypeWriters,3);
+  assert.equal(snapshot.prototypeWriters,4);
   assert.equal(snapshot.liveIntegratedWriters,0);
   assert.equal(snapshot.cutoverMayBeActivated,false);
   assert.equal(snapshot.writesDatabase,false);
@@ -52,11 +52,12 @@ test("opening report cannot change registered original writer coverage",()=>{
 });
 
 
-test("frozen conversion, baking and multi-product stock release are TEST prototypes, not live writers",()=>{
+test("shaping, frozen conversion, baking and multi-product release are CI prototypes, never live",()=>{
   const result=inspectStockWriterReadiness();
   const prototypes=result.writers.filter(x=>x.status==="PROTOTYPE_ONLY");
   assert.deepEqual(prototypes.map(x=>x.rpc),[
-    "release_frozen_stock","record_baking_result","record_multi_product_release",
+    "record_shaping_split","release_frozen_stock",
+    "record_baking_result","record_multi_product_release",
   ]);
   assert.ok(prototypes.every(x=>x.liveIntegrated===false));
   assert.equal(result.cutoverMayBeActivated,false);
