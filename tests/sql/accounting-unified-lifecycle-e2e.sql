@@ -298,7 +298,7 @@ begin
  begin
    update bunbun_accounting.finished_lot_positions
    set available_qty=available_qty-1 where lot_key=v_new_key;
-   execute 'SET CONSTRAINTS verify_unified_finished_position_commit IMMEDIATE';
+   execute 'SET CONSTRAINTS bunbun_accounting.verify_unified_finished_position_commit IMMEDIATE';
    raise exception 'UNEXPECTED SUCCESS direct finished lot stock forgery';
  exception when others then
    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
@@ -323,7 +323,7 @@ begin
  begin
    update bunbun_accounting.frozen_lot_positions
    set available_qty=1 where source_split_id=v_frozen;
-   execute 'SET CONSTRAINTS verify_unified_frozen_position_commit IMMEDIATE';
+   execute 'SET CONSTRAINTS bunbun_accounting.verify_unified_frozen_position_commit IMMEDIATE';
    raise exception 'UNEXPECTED SUCCESS direct frozen lot stock forgery';
  exception when others then
    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
