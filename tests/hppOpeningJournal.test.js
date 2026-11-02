@@ -147,3 +147,13 @@ test("missing journal or tampered accounting line is not shown as valid position
   firstAsset.debit += 1;
   assert.throws(() => buildOpeningFinancialPosition(journal), /tidak seimbang/);
 });
+
+test("work in progress at cutover is a separate stock asset, not a sale", () => {
+  const draft = readyDraft({ workInProgress: "12000" });
+  const journal = buildOpeningJournalPreview(draft);
+  assert.equal(journal.lines.find(line => line.accountCode === "1215")?.debit, 12000);
+  assert.equal(journal.totals.balanced, true);
+  const balance = buildOpeningFinancialPosition(journal);
+  assert.equal(balance.totals.assets, 727000);
+  assert.equal(balance.incomeStatementAvailable, false);
+});
