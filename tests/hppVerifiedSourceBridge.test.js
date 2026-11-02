@@ -294,3 +294,31 @@ test("cannot create recognized COGS from missing unit_value or CAFE_OUT alone", 
   assert.equal(result.actualProfitAvailable, false);
   assert.equal(result.readyToPost, false);
 });
+
+
+test("deposit dated before sold sale cannot be allocated despite matching nominal", () => {
+  const f = fixture();
+  f.sources.incomes[0].tanggal = "2026-11-04";
+  assert.throws(() => buildVerifiedAccountingSourceBridge(f), /mendahului tanggal penjualan/i);
+});
+
+test("cash payment before purchase invoice date is denied", () => {
+  const f = fixture();
+  f.sources.expenses[0].tanggal = "2026-11-01";
+  assert.throws(() => buildVerifiedAccountingSourceBridge(f), /mendahului tanggal faktur/i);
+});
+
+test("large numeric IDs must be represented safely and cannot round", () => {
+  const f = fixture();
+  f.sources.sales[0].id = Number.MAX_SAFE_INTEGER + 3;
+  assert.throws(() => buildVerifiedAccountingSourceBridge(f), /ID sales tidak valid/i);
+});
+
+test("source arrays remain unchanged and no IO occurs during proposal generation", () => {
+  const f = fixture();
+  const prior = JSON.stringify(f);
+  const preview = buildVerifiedAccountingSourceBridge(f);
+  assert.equal(JSON.stringify(f), prior);
+  assert.equal(preview.writesDatabase, false);
+  assert.equal(preview.readyToPost, false);
+});
