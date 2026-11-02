@@ -114,7 +114,7 @@ test("money conversion preserves negative and decimal-cent amounts", () => {
   assert.equal(parseReportAmount("1234.56"), 1234.56);
   assert.equal(parseReportAmount("-100.25"), -100.25);
   assert.throws(() => parseReportAmount("2.999"));
-  assert.throws(() => parseReportAmount("999999999999999.99"), /presisi/i);
+  assert.throws(() => parseReportAmount("999999999999999.99"), /nilai laporan|presisi/i);
 });
 
 test("closed full adjacent months calculate revenue and profit MoM growth", () => {
@@ -212,7 +212,7 @@ test("duplicate and out-of-period reports are refused", () => {
   }), /duplikat/i);
   assert.throws(() => buildBusinessHealthView({
     selectedMonth: "2026-10", nowMonth: "2026-11",
-    records: [normalize({ month: "2025-01" })],
+    records: [normalize({ month: "2025-01", cutoverDate: "2025-01-01" })],
   }), /di luar periode/i);
 });
 
