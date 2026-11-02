@@ -13,6 +13,7 @@
  */
 import { isValidIsoDate } from "./hppCutoverOpening.js";
 import { toJournalCents } from "./accountingPostedReports.js";
+import { proposeAccountingEvent } from "./accountingEventProposals.js";
 
 const nonnegativeMoney = (amount, label) => toJournalCents(amount, label);
 const cents = amount => {
@@ -294,6 +295,7 @@ export function traceLotCostDraft({ lots, events }) {
     }
     costEvents.push({
       id:eventId, lotId:lot.lotId, date:event.date, type:event.type,
+      evidenceRef:event.evidenceRef,
       qty, value:cents(valueMoved),
       isCogs:to === null,
       saleId:to === null ? String(event.saleId) : null,
@@ -326,5 +328,50 @@ export function traceLotCostDraft({ lots, events }) {
     sourceCompletelyVerified:false,
     accountingApproved:false,
     readyToPost:false, writesDatabase:false,
+  };
+}
+
+
+/**
+ * A sold lot creates a DRAFT COGS journal paired with an independently
+ * verified sale. This remains an owner review preview, NOT ledger posting.
+ * Transferring/consigning frozen stock never creates a COGS journal.
+ */
+export function proposeSoldLotCogsDrafts(costedTrace) {
+  if (!costedTrace || !Array.isArray(costedTrace.events) ||
+    costedTrace.readyToPost !== false ||
+    costedTrace.writesDatabase !== false ||
+    costedTrace.sourceCompletelyVerified !== false) {
+    throw new Error("Jejak nilai lot harus berasal dari pratinjau yang belum diposting.");
+  }
+  const proposals=[];
+  const keys=new Set();
+  for (const movement of costedTrace.events) {
+    if (!movement.isCogs) continue;
+    if (!["SOLD_AT_CAFE","DIRECT_SOLD"].includes(movement.type)) {
+      throw new Error("COGS hanya dari penjualan lot yang terverifikasi.");
+    }
+    const saleId=positiveId(movement.saleId,"Sale");
+    const key="verified-cogs:"+saleId+":"+movement.id;
+    if (keys.has(key)) throw new Error("COGS lot yang sama diusulkan dua kali.");
+    keys.add(key);
+    const result=proposeAccountingEvent({
+      type:"RECOGNIZE_SOLD_COGS", reviewed:true,
+      date:movement.date, sourceKey:key,
+      amount:movement.value, evidence:movement.evidenceRef,
+      inventoryAccount:movement.type === "SOLD_AT_CAFE" ? "1240" : "1220",
+    });
+    proposals.push({
+      ...result, sourceLotId:movement.lotId, saleId,
+      requiresVerifiedLotToSaleAllocation:true,
+      evidenceFromClientNotAuthorized:true,
+      readyToPost:false, writesDatabase:false,
+    });
+  }
+  return {
+    proposals,
+    source:"COSTED_LOT_SALE_PREVIEW_ONLY",
+    totalDraftCogs:costedTrace.soldCogs,
+    actualHppApproved:false, readyToPost:false, writesDatabase:false,
   };
 }
