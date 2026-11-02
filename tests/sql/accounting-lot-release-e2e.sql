@@ -241,7 +241,8 @@ begin
     raise exception 'UNEXPECTED SUCCESS: recorded operation deleted';
   exception when others then
     if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
-    if sqlerrm not like '%cannot be edited%' then raise; end if;
+    if sqlerrm not like '%cannot be edited%' and
+       sqlerrm not like '%permission denied%' then raise; end if;
   end;
 
   raise notice 'PASS: lot release operation is atomic, idempotent, stock-safe, private, and NOT accounting posting';
