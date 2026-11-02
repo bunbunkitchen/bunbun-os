@@ -103,6 +103,12 @@ const menus = [
     roles: ["owner"],
   },
   {
+    name: "Persiapan Saldo Awal",
+    path: "/finance/cutover",
+    icon: <MdAttachMoney />,
+    roles: ["owner"],
+  },
+  {
     name: "Audit Biaya HPP",
     path: "/finance/hpp-audit",
     icon: <MdAssessment />,
