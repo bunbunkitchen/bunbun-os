@@ -109,6 +109,12 @@ const menus = [
     roles: ["owner"],
   },
   {
+    name: "Audit Sumber Keuangan",
+    path: "/finance/source-audit",
+    icon: <MdAssessment />,
+    roles: ["owner"],
+  },
+  {
     name: "Audit Biaya HPP",
     path: "/finance/hpp-audit",
     icon: <MdAssessment />,
