@@ -77,7 +77,7 @@ export function buildCutoverIngredientReview({ cutoverDate, ingredients = [], mo
       row.isReliable = false;
       continue;
     }
-    let sign = 0;
+    let sign;
     if (INCOMING.has(movement.transaction_type)) sign = 1;
     else if (OUTGOING.has(movement.transaction_type)) sign = -1;
     else {
