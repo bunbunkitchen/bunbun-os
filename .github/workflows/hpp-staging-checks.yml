@@ -38,6 +38,7 @@ on:
       - "docs/sql/accounting-single-cafe-lot-staging.sql"
       - "docs/sql/accounting-product-adjustment-staging.sql"
       - "docs/sql/accounting-product-adjustment-operations-staging.sql"
+      - "docs/sql/accounting-unified-stock-gate-staging.sql"
       - "src/services/accountingSaleStockAuditService.js"
       - "src/pages/finance/SaleLotTraceAudit.jsx"
       - "src/utils/accountingBatchLotAudit.js"
@@ -289,6 +290,27 @@ jobs:
           PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
           PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-adjustment-race-seed.sql
           PGDATABASE=bunbun_adjust_race_ci bash tests/sql/accounting-adjustment-race.sh
+      - name: Validate all nine stock writers together with one deferred invariant
+        run: |
+          createdb bunbun_unified_lifecycle_ci
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-bootstrap.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-shaping-batch-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-unified-sales-bootstrap.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-lot-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-create-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-cancel-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-edit-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-single-cafe-lot-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-unified-stock-gate-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-unified-lifecycle-e2e.sql
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
