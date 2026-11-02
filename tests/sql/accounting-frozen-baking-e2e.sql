@@ -66,6 +66,7 @@ begin
       operation_key)
    values ('2026-11-07','FROZEN_OUT',1,200,1,v_bad_key);
    execute 'SET CONSTRAINTS verify_lot_allocation_before_commit IMMEDIATE';
+ execute 'SET CONSTRAINTS verify_lot_allocation_before_commit DEFERRED';
    raise exception 'UNEXPECTED SUCCESS untracked frozen movement';
  exception when others then
    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
@@ -111,6 +112,7 @@ begin
    raise exception 'Incorrect frozen source movement';
  end if;
  execute 'SET CONSTRAINTS verify_lot_allocation_before_commit IMMEDIATE';
+ execute 'SET CONSTRAINTS verify_lot_allocation_before_commit DEFERRED';
 
  -- Replay cannot make a second split or decrement frozen twice.
  v_json:=bunbun_accounting.record_frozen_to_direct_staging(
@@ -166,6 +168,7 @@ begin
    raise exception 'Frozen-derived finished position missing';
  end if;
  execute 'SET CONSTRAINTS verify_lot_allocation_before_commit IMMEDIATE';
+ execute 'SET CONSTRAINTS verify_lot_allocation_before_commit DEFERRED';
 
  -- No double-production: the frozen parent was reduced 4, and only the
  -- three successfully baked units exist in the NEW finished split.
@@ -214,6 +217,7 @@ begin
    raise exception 'Release from newly baked lot failed %',v_json;
  end if;
  execute 'SET CONSTRAINTS verify_lot_allocation_before_commit IMMEDIATE';
+ execute 'SET CONSTRAINTS verify_lot_allocation_before_commit DEFERRED';
 
  select coalesce(sum(case
    when movement_type in ('FINISHED_IN','OPENING_BALANCE','CAFE_IN') then qty
