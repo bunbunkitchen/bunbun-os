@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "src/pages/finance/HppAudit.jsx"
+      - "src/pages/finance/CutoverPreparation.jsx"
+      - "src/services/hppCutoverService.js"
       - "src/components/hpp/**"
       - "src/services/batchCostingReadService.js"
       - "src/services/hppAuditService.js"
@@ -34,6 +36,6 @@ jobs:
       - name: HPP unit tests
         run: node --test tests/hpp*.test.js
       - name: HPP lint
-        run: npx eslint src/utils/hppBatchAssessment.js src/utils/hppCostReview.js src/utils/hppMonthlyAllocation.js src/utils/hppHistoricalValuation.js src/services/hppHistoricalValuationService.js src/components/hpp/HistoricalInventoryAudit.jsx src/services/batchCostingReadService.js src/services/hppAuditService.js src/pages/finance/HppAudit.jsx src/routes/AppRoutes.jsx src/components/layout/Sidebar.jsx
+        run: npx eslint src/utils/hppBatchAssessment.js src/utils/hppCostReview.js src/utils/hppMonthlyAllocation.js src/utils/hppHistoricalValuation.js src/utils/hppCutoverOpening.js src/services/hppCutoverService.js src/pages/finance/CutoverPreparation.jsx src/services/hppHistoricalValuationService.js src/components/hpp/HistoricalInventoryAudit.jsx src/services/batchCostingReadService.js src/services/hppAuditService.js src/pages/finance/HppAudit.jsx src/routes/AppRoutes.jsx src/components/layout/Sidebar.jsx
       - name: Production build
         run: npm run build
