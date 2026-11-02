@@ -15,6 +15,8 @@ on:
       - "src/utils/accountingPostedReports.js"
       - "src/utils/accountingEventProposals.js"
       - "docs/sql/accounting-schema-review.sql"
+      - "docs/sql/accounting-posting-staging.sql"
+      - "tests/sql/accounting-*.sql"
       - "src/routes/AppRoutes.jsx"
       - "src/components/layout/Sidebar.jsx"
       - "tests/hpp*.test.js"
@@ -43,3 +45,38 @@ jobs:
         run: npx eslint src/utils/hppBatchAssessment.js src/utils/hppCostReview.js src/utils/hppMonthlyAllocation.js src/utils/hppHistoricalValuation.js src/utils/hppCutoverOpening.js src/utils/accountingOpeningJournal.js src/utils/accountingPostedReports.js src/utils/accountingEventProposals.js src/components/hpp/OpeningJournalPreview.jsx src/services/hppCutoverService.js src/pages/finance/CutoverPreparation.jsx src/services/hppHistoricalValuationService.js src/components/hpp/HistoricalInventoryAudit.jsx src/services/batchCostingReadService.js src/services/hppAuditService.js src/pages/finance/HppAudit.jsx src/routes/AppRoutes.jsx src/components/layout/Sidebar.jsx
       - name: Production build
         run: npm run build
+
+  accounting-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: bunbun_ci_only
+          POSTGRES_DB: bunbun_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bunbun_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: bunbun_ci_only
+      PGDATABASE: bunbun_ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Isolated auth and role fixtures
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+      - name: Reviewed accounting schema on ephemeral PG only
+        run: psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-schema-review.sql
+      - name: Posting procedure and immutable journal guards
+        run: psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-posting-staging.sql
+      - name: Real SQL posting test suite
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-posting-e2e.sql
