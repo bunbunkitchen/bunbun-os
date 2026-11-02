@@ -163,10 +163,16 @@ begin
    select * into v_derived from public.production_batch_splits
    where id=v_frozen.direct_split_id;
    if not found or v_derived.source_split_id<>v_parent.source_split_id
-     or v_derived.route<>'DIRECT' or v_derived.status<>'PROOFING'
+     or v_derived.route<>'DIRECT' or v_derived.status not in ('PROOFING','BAKING','BAKED')
      or v_derived.product_id<>new.product_id
      or v_derived.qty<>new.qty then
      raise exception 'Derived split does not reflect frozen conversion';
+   end if;
+   if v_derived.status='BAKED' and not exists (
+     select 1 from bunbun_accounting.baking_operations
+     where direct_split_id=v_derived.id and status='RECORDED'
+   ) then
+     raise exception 'Baked frozen derivative has no verified baking event';
    end if;
    select coalesce(sum(qty),0) into v_used
    from bunbun_accounting.frozen_conversion_operations
@@ -320,6 +326,17 @@ begin
    or v_lot.available_qty<p_qty then
    raise exception 'Frozen lot is missing or insufficient';
  end if;
+ if not exists (
+   select 1 from public.product_stock_movements m
+   where m.id=v_lot.source_movement_id
+     and m.movement_type='FROZEN_IN'
+     and m.batch_split_id=v_parent.id
+     and m.product_id=v_parent.product_id
+     and m.qty=v_lot.original_qty
+     and m.is_deleted=false
+ ) or v_lot.original_qty>v_parent.qty then
+   raise exception 'Frozen root position lacks original matching FROZEN_IN stock';
+ end if;
  select coalesce(sum(case when movement_type='FROZEN_IN' then qty
                         when movement_type='FROZEN_OUT' then -qty
                         else 0 end),0) into v_stock
@@ -434,6 +451,13 @@ begin
  if exists(select 1 from bunbun_accounting.baking_operations
            where direct_split_id=p_direct_split_id) then
    raise exception 'Direct split already has a different baking event';
+ end if;
+ if exists (
+   select 1 from public.product_stock_movements
+   where batch_split_id=p_direct_split_id
+     and movement_type='FINISHED_IN' and is_deleted=false
+ ) then
+   raise exception 'DIRECT split already received finished goods from an earlier writer';
  end if;
  if v_split.source_split_id is not null then
    select * into v_frozen from bunbun_accounting.frozen_conversion_operations
