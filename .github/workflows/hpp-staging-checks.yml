@@ -91,3 +91,14 @@ jobs:
           PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-posting-staging.sql
           PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-reports-staging.sql
           PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-bakery-lifecycle.sql
+
+  edge-owner-auth:
+    name: Staging Owner Edge typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck staging-only Edge Function
+        run: deno check supabase/functions/accounting-owner-readiness/index.ts
