@@ -62,7 +62,7 @@ function mapStockMovements(movements) {
   }));
 }
 
-export async function getFinancialReport({ startDate, endDate, role = "owner" }) {
+export async function getFinancialReport({ startDate, endDate, role }) {
   const canViewFinancialReports = role === "owner";
   const [allIncomes, allExpenses, allBatches, allPurchases, allSales, allStockMovements] =
     await Promise.all([

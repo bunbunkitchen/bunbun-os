@@ -53,6 +53,7 @@ const BAKER_REPORT_TYPES = [
 
 export default function Reports() {
   const { role } = useAuth();
+  const isOwner = role === "owner";
   const isBaker = role === "baker";
 
   const defaultRange = getCurrentMonthRange();
@@ -64,12 +65,12 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState("");
 
-  const availableReportTypes = isBaker
-    ? REPORT_TYPES.filter((item) => BAKER_REPORT_TYPES.includes(item.value))
-    : REPORT_TYPES;
+  const availableReportTypes = isOwner
+    ? REPORT_TYPES
+    : REPORT_TYPES.filter((item) => BAKER_REPORT_TYPES.includes(item.value));
   const effectiveReportType = availableReportTypes.some((item) => item.value === reportType)
     ? reportType
-    : isBaker ? "purchase" : "expense";
+    : "purchase";
 
   async function loadReport() {
     if (!startDate || !endDate) {
@@ -255,19 +256,19 @@ export default function Reports() {
   let showTotal = false;
 
   if (report) {
-    if (effectiveReportType === "income" && !isBaker) {
+    if (effectiveReportType === "income" && isOwner) {
       table = <DataTable columns={incomeColumns} data={report.incomes} emptyMessage="Tidak ada pemasukan pada periode ini" />;
       totalLabel = "Total Pemasukan";
       totalValue = report.summary.totalIncome;
       showTotal = true;
-    } else if (effectiveReportType === "expense" && !isBaker) {
+    } else if (effectiveReportType === "expense" && isOwner) {
       table = <DataTable columns={expenseColumns} data={report.expenses} emptyMessage="Tidak ada pengeluaran pada periode ini" />;
       totalLabel = "Total Pengeluaran";
       totalValue = report.summary.totalExpense;
       showTotal = true;
     } else if (effectiveReportType === "purchase") {
       table = <DataTable columns={purchaseColumns} data={report.purchases} emptyMessage="Tidak ada purchasing pada periode ini" />;
-    } else if (effectiveReportType === "sales" && !isBaker) {
+    } else if (effectiveReportType === "sales" && isOwner) {
       table = <DataTable columns={salesColumns} data={report.sales} emptyMessage="Tidak ada penjualan pada periode ini" />;
       totalLabel = "Total Penjualan";
       totalValue = report.summary.totalSales;
@@ -374,7 +375,7 @@ export default function Reports() {
             </p>
           )}
 
-          {!isBaker && (
+          {isOwner && (
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               <Card>
                 <p className="text-sm text-gray-500">Pemasukan Bersih Bunbun</p>
