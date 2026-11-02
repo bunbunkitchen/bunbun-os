@@ -62,14 +62,15 @@ function mapStockMovements(movements) {
   }));
 }
 
-export async function getFinancialReport({ startDate, endDate }) {
+export async function getFinancialReport({ startDate, endDate, role = "owner" }) {
+  const canViewFinancialReports = role === "owner";
   const [allIncomes, allExpenses, allBatches, allPurchases, allSales, allStockMovements] =
     await Promise.all([
-      getAllIncomes(),
-      getAllExpenses(),
+      canViewFinancialReports ? getAllIncomes() : Promise.resolve([]),
+      canViewFinancialReports ? getAllExpenses() : Promise.resolve([]),
       getAllProductionBatches(),
       getAllPurchases(),
-      getAllSales(),
+      canViewFinancialReports ? getAllSales() : Promise.resolve([]),
       getProductStockMovements(),
     ]);
 
@@ -126,3 +127,4 @@ export async function getFinancialReport({ startDate, endDate }) {
     },
   };
 }
+
