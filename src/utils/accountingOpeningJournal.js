@@ -13,6 +13,7 @@ export const OPENING_ACCOUNTS = Object.freeze([
   { code: "1020", name: "Bank", side: "DEBIT", source: "bank" },
   { code: "1120", name: "Piutang Usaha", side: "DEBIT", source: "receivables" },
   { code: "1210", name: "Persediaan Bahan Baku", side: "DEBIT", source: "rawInventory" },
+  { code: "1215", name: "Produksi Dalam Proses (WIP)", side: "DEBIT", source: "workInProgress" },
   { code: "1220", name: "Persediaan Produk Jadi", side: "DEBIT", source: "finishedGoods" },
   { code: "1230", name: "Persediaan Produk Frozen", side: "DEBIT", source: "frozenGoods" },
   { code: "1240", name: "Produk Titipan di Kafe Belum Terjual", side: "DEBIT", source: "consignmentGoods" },
