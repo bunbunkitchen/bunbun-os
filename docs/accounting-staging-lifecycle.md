@@ -1,3 +1,5 @@
+> Pembaruan 2026-11-02: staging independen telah aktif dan pengujian real-schema ledger serta sembilan stock writers lulus dalam transaksi rollback. Status mutakhir: [runbook](accounting-staging-implementation-runbook.md). Uraian keterbatasan staging belum ada di bawah adalah riwayat tahap CI, bukan kondisi sekarang. Belum ada aktivasi produksi atau HPP aktual.
+
 # Bunbun OS — Uji End-to-End Transaksi Bakery dan Laporan Akuntansi
 
 > STATUS: STAGING TEST ONLY. Seluruh nominal di bawah adalah **simulasi** dan BUKAN laba atau omzet Bunbun yang sesungguhnya.

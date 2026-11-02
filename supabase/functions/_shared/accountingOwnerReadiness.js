@@ -141,7 +141,7 @@ export function createOwnerReadinessHandler({
       financialValuesAvailable: false,
       blockers: [
         "Tanggal cutover dan stok opname Owner belum disahkan.",
-        "Belum ada Supabase staging dan ledger yang terhubung.",
+        "Ledger akuntansi belum terhubung ke alur transaksi aplikasi.",
         "Backend posting sumber transaksi belum diaktifkan.",
       ],
     }, 200, origin);

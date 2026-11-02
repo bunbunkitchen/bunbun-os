@@ -2,7 +2,7 @@
 
 **STATUS 2026-11-02: staging `pkgrqalpazhwdcxmthvb` ACTIVE_HEALTHY; baseline 21 tabel terpasang, hardening anonim dan signup diterapkan. Lihat catatan verifikasi terbaru di bagian akhir.** Semua file SQL `docs/sql/accounting-*-staging.sql` masih prototipe laboratorium; jangan langsung diterapkan pada Supabase production ataupun staging tanpa rekonsiliasi skema.
 
-## 1. Proyek dan biaya
+## 1. Proyek dan biaya — catatan audit awal (historis)
 - Organisasi Supabase yang terhubung: `Bunbun Kitchen` (Free), project produksi `bunbun-os` di `ap-southeast-1` dengan PostgreSQL 17.6. Hanya satu project terdeteksi, **tidak ada branch**. Tidak ada staging baru saat audit.
 - `get_cost` menunjukkan **standalone project US$0/bulan** untuk organisasi tersebut saat pengecekan; development branch berbeda, **US$0.01344/jam**, belum termasuk pemakaian lain. Backend Supabase tetap meminta **cost confirmation ID walaupun biaya proyek ditampilkan US$0**. Jangan memanggil `confirm_cost` hingga pengguna secara eksplisit menyetujui penawaran itu.
 - Pilih **project baru bernama `bunbun-os-staging` di organisasi yang sama, region `ap-southeast-1`**, setelah konfirmasi. Catat project ref baru lalu pastikan TIDAK sama dengan ref produksi `amgyogvqyuxzdpjseqsi`. Never use a production service key in staging.
@@ -22,7 +22,7 @@
 - Referensi: https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable dan https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable.
 - Private schema harus tetap tidak diekspos API umum dan `service_role` tidak pernah masuk kode frontend, GitHub artifacts/logs atau file `.env` yang di-commit.
 
-## 4. Auth Owner asli — tes yang disiapkan, belum dijalankan remote
+## 4. Auth Owner asli — rencana awal, sudah diverifikasi pada catatan terbaru
 - Backend `supabase/functions/accounting-owner-readiness/index.ts` ada di PR, **belum di-deploy**. Ia memverifikasi JWT lewat Supabase Auth `getUser`, lalu memuat ulang `profiles.role` dan `profiles.is_active`. Response Owner sengaja `BLOCKED_PENDING_CUTOVER` (read only, tidak bisa posting). Semua endpoint posting tetap disabled.
 - `scripts/staging/owner-auth-smoke.mjs` dan `scripts/staging/stagingTarget.mjs` menolak URL/ref produksi, memerlukan publishable key staging dan origin staging yang cocok; kemudian mengetes credential akun **dummy yang dibuat khusus staging**: Owner aktif → 200, Baker → 403, Owner nonaktif → 403, anonymous dan token palsu → 401. Tidak ada perubahan data.
 - Jalankan hanya sesudah project staging ada, backend staging-only dan tiga akun dummy terpisah disiapkan, URL frontend dan allow-list CORS benar, dan Cloud Edge config `verify_jwt=true`.
@@ -49,10 +49,10 @@
 |---|---|
 | Read-only audit struktur produksi & gap HPP | SELESAI |
 | CI PG16+PG17 gabungan 9 keluarga stock writers | SELESAI |
-| Script smoke test staging-only Owner Auth | DISIAPKAN, BELUM LIVE |
+| Script smoke test staging-only Owner Auth | LIVE TEST LULUS; dummy dibersihkan |
 | Proyek staging terpisah | ACTIVE_HEALTHY: pkgrqalpazhwdcxmthvb |
 | Baseline schema/trigger real ke staging | TERPASANG: 21 tabel; kompatibilitas writer akuntansi belum disahkan |
-| Auth Owner/Baker nyata di staging | BELUM |
+| Auth Owner/Baker nyata di staging | LULUS; Owner aktif/Baker/inactive/anon/forged token |
 | Opname + cost evidence approved dan ledger posting | BELUM |
 | Laba rugi aktual production | TETAP DISABLED |
 
@@ -65,3 +65,31 @@
 - ACL anonim Stock Adjustment false. Advisor tidak lagi melaporkan anonymous SECURITY DEFINER atau mutable search_path; masih ada 20 warning authenticated SECURITY DEFINER yang harus direview per fungsi sebelum cutover.
 - 27 tes guard/auth/target lokal lulus; build Vite lulus. Ini belum membuktikan seluruh 9 writer akuntansi pada skema cloud asli.
 - Pemasangan ledger akuntansi, pengujian stok ujung ke ujung, bukti biaya, opname dan persetujuan saldo awal tetap belum selesai. Jangan sahkan HPP aktual.
+
+
+## Ledger dan stock writers pada skema cloud asli — 2026-11-02
+Dua migrasi khusus **staging** telah dipasang pada `pkgrqalpazhwdcxmthvb`:
+1. `isolated_staging_private_ledger_core`: akun, periode, saldo awal draft, jurnal, audit, fungsi posting private dan view laporan invoker.
+2. `isolated_staging_private_stock_writers`: sembilan keluarga penulis stok, alokasi lot, invariant deferred dan perlindungan provenance. Control tetap `OFF`.
+
+SQL yang direview: `docs/sql/cloud-ledger-core-staging.sql` dan `docs/sql/cloud-stock-writers-staging.sql`. Jangan jalankan file prototipe CI/bootstrap terhadap Supabase. Adapter stok dapat dibangun ulang dengan `python scripts/staging/build-real-schema-stock.py`; tidak menjalankan SQL.
+
+### Bukti uji pada staging asli
+- `tests/sql/cloud-ledger-real-schema-rollback.sql`: lolos jurnal berimbang, pembukaan sebelum posting normal, Owner aktif, larangan Baker/nonaktif, idempotency, reversal sah, immutable jurnal final dan periode closed. Simulasi laporan: pendapatan 150.000, HPP 60.000, beban 20.000, laba 70.000; kas 970.000; aset 1.320.000 = utang 50.000 + ekuitas 1.270.000. Semua ini **angka dummy**, di-ROLLBACK.
+- `tests/sql/cloud-stock-real-schema-rollback.sql`: lolos shaping → direct/frozen → baking → single/multi cafe → sale → cancel/physical return → replacement → adjustment OUT/IN. Saldo akhir simulasi 13 dan 4 cocok dengan cache asli `finished_product_stock_balances.saldo`. Semua constraints, FK, RLS dan trigger asli tetap dipasang. Percobaan memalsukan saldo/provenance dan kode lot yang salah ditolak. Tidak ada jurnal keuangan dibuat oleh alur stok ini.
+- Harness menghabiskan deferred events stok awal selagi gate OFF sebelum menyalakan gate dalam transaksi uji. Ini mencegah fixture historis diperlakukan sebagai baking baru. Seluruh uji menutup dengan ROLLBACK.
+- Trigger asli menghasilkan kode lot otomatis dari `production_batches.kode` dan menyalin kode yang sama ke beberapa split. Adapter tidak memasang index unique frozen-code dari fixture CI, serta menolak kode permintaan shaping yang berbeda dari kode otomatis. Identitas lot tetap split ID.
+- File baseline schema-only diperbaiki untuk mempertahankan grouping boolean `product_stock_movements_split_required_check` sesuai definisi cloud; constraint cloud sudah benar dan tidak dilonggarkan.
+- Seluruh 288 tes Node lulus; tes guard Owner diperiksa kembali sesudah pembaruan teks readiness.
+
+### Hasil pemeriksaan akhir
+Auth users = 0, products = 0, stock movements = 0, journals = 0, periods = 0; control `OFF`. Tidak ada saldo awal dummy yang tersimpan. `anon` dan `authenticated` tidak punya USAGE schema akuntansi maupun EXECUTE fungsi posting; seluruh 21 tabel private memakai RLS dan tidak ada fungsi SECURITY DEFINER di schema akuntansi.
+
+Advisor: 21 informasi `rls_enabled_no_policy` pada tabel private disengaja untuk akses backend service_role saja (tanpa akses browser); 20 warning authenticated SECURITY DEFINER pada fungsi legacy masih perlu audit per peran. Referensi:
+- https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
+- https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+
+### Batas hasil dan pekerjaan berikutnya
+Ini memvalidasi mesin ledger dan sembilan keluarga stock writer pada skema asli. Belum memvalidasi seluruh integrasi UI/API aplikasi, dua koneksi bersamaan pada cloud, pengiriman sumber transaksi ke jurnal otomatis, perhitungan unit cost aktual atau laporan Owner live. CI concurrency lama tidak diklaim sebagai tes cloud. Edge readiness tetap `mayPost=false`; endpoint posting dan tampilan laba aktual belum diaktifkan. Tidak ada perubahan produksi atau merge main.
+
+Sebelum cutover: audit 20 warning legacy menurut peran; sambungkan backend/UI staging dan uji konkurensi cloud; lengkapi opname fisik, bukti invoice/biaya dan saldo awal yang disahkan Owner. Jangan memindahkan nilai simulasi atau mengaktifkan pelacakan produksi dari hasil ini.

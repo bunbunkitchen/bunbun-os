@@ -2096,7 +2096,7 @@ ALTER TABLE public."sales" ADD CONSTRAINT "sales_total_amount_check" CHECK (tota
 ALTER TABLE public."product_stock_movements" ADD CONSTRAINT "product_stock_movements_movement_type_check" CHECK (movement_type = ANY (ARRAY['FROZEN_IN'::text, 'FROZEN_OUT'::text, 'FINISHED_IN'::text, 'CAFE_OUT'::text, 'CAFE_IN'::text, 'OPENING_BALANCE'::text, 'ADJUSTMENT_IN'::text, 'ADJUSTMENT_OUT'::text]));
 ALTER TABLE public."product_stock_movements" ADD CONSTRAINT "product_stock_movements_pkey" PRIMARY KEY (id);
 ALTER TABLE public."product_stock_movements" ADD CONSTRAINT "product_stock_movements_qty_check" CHECK (qty > 0);
-ALTER TABLE public."product_stock_movements" ADD CONSTRAINT "product_stock_movements_split_required_check" CHECK ((movement_type = ANY (ARRAY['FROZEN_IN'::text, 'FROZEN_OUT'::text, 'FINISHED_IN'::text])) AND batch_split_id IS NOT NULL OR (movement_type = ANY (ARRAY['CAFE_OUT'::text, 'CAFE_IN'::text, 'OPENING_BALANCE'::text, 'ADJUSTMENT_IN'::text, 'ADJUSTMENT_OUT'::text])) AND batch_split_id IS NULL);
+ALTER TABLE public."product_stock_movements" ADD CONSTRAINT "product_stock_movements_split_required_check" CHECK (((movement_type IN ('FROZEN_IN','FROZEN_OUT','FINISHED_IN')) AND batch_split_id IS NOT NULL) OR ((movement_type IN ('CAFE_OUT','CAFE_IN','OPENING_BALANCE','ADJUSTMENT_IN','ADJUSTMENT_OUT')) AND batch_split_id IS NULL));
 ALTER TABLE public."product_stock_movements" ADD CONSTRAINT "product_stock_movements_unit_check" CHECK (unit = 'pcs'::text);
 ALTER TABLE public."profiles" ADD CONSTRAINT "profiles_id_fkey" FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
 ALTER TABLE public."incomes" ADD CONSTRAINT "incomes_created_by_fkey" FOREIGN KEY (created_by) REFERENCES auth.users(id);
