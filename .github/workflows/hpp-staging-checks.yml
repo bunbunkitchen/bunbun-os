@@ -39,6 +39,7 @@ on:
       - "docs/sql/accounting-product-adjustment-staging.sql"
       - "docs/sql/accounting-product-adjustment-operations-staging.sql"
       - "docs/sql/accounting-unified-stock-gate-staging.sql"
+      - "docs/sql/accounting-unified-position-protection-staging.sql"
       - "src/services/accountingSaleStockAuditService.js"
       - "src/pages/finance/SaleLotTraceAudit.jsx"
       - "src/utils/accountingBatchLotAudit.js"
@@ -310,6 +311,7 @@ jobs:
           PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-staging.sql
           PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
           PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-unified-stock-gate-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-unified-position-protection-staging.sql
           PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-unified-lifecycle-e2e.sql
       - name: Verify unified sale and stock adjustment compete for the same finished lot safely
         run: |
@@ -331,6 +333,7 @@ jobs:
           PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-staging.sql
           PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
           PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-unified-stock-gate-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-unified-position-protection-staging.sql
           PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-unified-sale-adjustment-race-seed.sql
           PGDATABASE=bunbun_unified_cross_race_ci bash tests/sql/accounting-unified-sale-adjustment-race.sh
 
