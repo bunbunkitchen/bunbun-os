@@ -187,6 +187,17 @@ jobs:
           PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
           PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
           PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-e2e.sql
+      - name: Verify competing frozen releases cannot consume the same lot twice
+        run: |
+          createdb bunbun_frozen_race_ci
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-race-seed.sql
+          PGDATABASE=bunbun_frozen_race_ci bash tests/sql/accounting-frozen-race.sh
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
