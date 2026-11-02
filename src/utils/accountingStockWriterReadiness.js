@@ -6,7 +6,7 @@ export const STOCK_WRITER_COVERAGE = Object.freeze([
     "movementTypes": [
       "FROZEN_IN"
     ],
-    "status": "NOT_INTEGRATED"
+    "status": "PROTOTYPE_ONLY"
   },
   {
     "rpc": "release_frozen_stock",
