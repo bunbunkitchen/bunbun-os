@@ -14,6 +14,8 @@ on:
       - "src/utils/accountingOpeningJournal.js"
       - "src/utils/accountingPostedReports.js"
       - "src/utils/accountingEventProposals.js"
+      - "supabase/functions/accounting-owner-readiness/**"
+      - "supabase/functions/_shared/accountingOwnerReadiness.js"
       - "docs/sql/accounting-schema-review.sql"
       - "docs/sql/accounting-posting-staging.sql"
       - "docs/sql/accounting-reports-staging.sql"
@@ -43,7 +45,7 @@ jobs:
       - name: HPP unit tests
         run: node --test tests/hpp*.test.js
       - name: HPP lint
-        run: npx eslint src/utils/hppBatchAssessment.js src/utils/hppCostReview.js src/utils/hppMonthlyAllocation.js src/utils/hppHistoricalValuation.js src/utils/hppCutoverOpening.js src/utils/accountingOpeningJournal.js src/utils/accountingPostedReports.js src/utils/accountingEventProposals.js src/components/hpp/OpeningJournalPreview.jsx src/services/hppCutoverService.js src/pages/finance/CutoverPreparation.jsx src/services/hppHistoricalValuationService.js src/components/hpp/HistoricalInventoryAudit.jsx src/services/batchCostingReadService.js src/services/hppAuditService.js src/pages/finance/HppAudit.jsx src/routes/AppRoutes.jsx src/components/layout/Sidebar.jsx
+        run: npx eslint src/utils/hppBatchAssessment.js src/utils/hppCostReview.js src/utils/hppMonthlyAllocation.js src/utils/hppHistoricalValuation.js src/utils/hppCutoverOpening.js src/utils/accountingOpeningJournal.js src/utils/accountingPostedReports.js src/utils/accountingEventProposals.js supabase/functions/_shared/accountingOwnerReadiness.js src/components/hpp/OpeningJournalPreview.jsx src/services/hppCutoverService.js src/pages/finance/CutoverPreparation.jsx src/services/hppHistoricalValuationService.js src/components/hpp/HistoricalInventoryAudit.jsx src/services/batchCostingReadService.js src/services/hppAuditService.js src/pages/finance/HppAudit.jsx src/routes/AppRoutes.jsx src/components/layout/Sidebar.jsx
       - name: Production build
         run: npm run build
 
