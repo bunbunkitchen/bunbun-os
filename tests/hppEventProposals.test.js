@@ -120,7 +120,7 @@ test("a proposal always requires review, evidence, source key, date and positive
   assert.throws(() => propose("PURCHASE_RAW_MATERIAL", { sourceKey: "" }), /sumber unik/i);
   assert.throws(() => propose("PURCHASE_RAW_MATERIAL", { date: "2026-02-30" }), /tanggal/i);
   assert.throws(() => propose("PURCHASE_RAW_MATERIAL", { amount: "0" }), /positif/i);
-  assert.throws(() => propose("PURCHASE_RAW_MATERIAL", { amount: "12.345" }), /desimal/i);
+  assert.throws(() => propose("PURCHASE_RAW_MATERIAL", { amount: "12.345" }), /angka Rupiah/i);
 });
 
 test("unknown event types and cash accounts must not be auto-mapped", () => {
