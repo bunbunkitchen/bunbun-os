@@ -164,6 +164,7 @@ export function previewNewLotRelease({
     status: "NEW_LOT_RELEASE_PLAN_ONLY",
     operationKey,
     cutoverDate, releaseDate, destination: destination.trim(), destinationType,
+    releaseEvidenceRef,
     productRows, allocationRows,
     projectedLotBalances: lots.map(candidate => {
       const source = stockByLot.get(candidate.lotId);
