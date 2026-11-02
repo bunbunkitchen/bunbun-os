@@ -46,7 +46,7 @@ export const STOCK_WRITER_COVERAGE = Object.freeze([
     "movementTypes": [
       "CAFE_OUT"
     ],
-    "status": "NOT_INTEGRATED"
+    "status": "PROTOTYPE_ONLY"
   },
   {
     "rpc": "update_sale_transaction",
@@ -55,7 +55,7 @@ export const STOCK_WRITER_COVERAGE = Object.freeze([
       "CAFE_IN",
       "CAFE_OUT"
     ],
-    "status": "NOT_INTEGRATED"
+    "status": "PROTOTYPE_ONLY"
   },
   {
     "rpc": "delete_sale_transaction",
@@ -63,7 +63,7 @@ export const STOCK_WRITER_COVERAGE = Object.freeze([
     "movementTypes": [
       "CAFE_IN"
     ],
-    "status": "NOT_INTEGRATED"
+    "status": "PROTOTYPE_ONLY"
   },
   {
     "rpc": "record_product_stock_adjustment",
