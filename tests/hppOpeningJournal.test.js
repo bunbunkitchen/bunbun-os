@@ -110,7 +110,7 @@ test("incomplete stock count and valuation source are rejected", () => {
   first.inventory[0].stockValue = null;
   assert.throws(() => buildOpeningJournalPreview(first));
   const second = readyDraft();
-  second.inventory[0].costSource = null;
+  second.inventory.find(item => item.physicalQty > 0).costSource = null;
   assert.throws(() => buildOpeningJournalPreview(second), /dasar valuasi/i);
 });
 
