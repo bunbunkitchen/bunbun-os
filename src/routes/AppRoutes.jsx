@@ -21,6 +21,7 @@ import Maintenance from "../pages/maintenance/Maintenance";
 import Income from "../pages/finance/Income";
 import Expense from "../pages/finance/Expense";
 import HppAudit from "../pages/finance/HppAudit";
+import CutoverPreparation from "../pages/finance/CutoverPreparation";
 import Sales from "../pages/sales/Sales";
 import Reports from "../pages/reports/Reports";
 import Settings from "../pages/settings/Settings";
@@ -68,6 +69,7 @@ export default function AppRoutes() {
 
           <Route path="finance/expense" element={<RoleRoute allowedRoles={["owner"]}><Expense /></RoleRoute>} />
           <Route path="finance/hpp-audit" element={<RoleRoute allowedRoles={["owner"]}><HppAudit /></RoleRoute>} />
+          <Route path="finance/cutover" element={<RoleRoute allowedRoles={["owner"]}><CutoverPreparation /></RoleRoute>} />
           <Route path="reports" element={<RoleRoute allowedRoles={["owner", "baker"]}><Reports /></RoleRoute>} />
           <Route path="settings" element={<RoleRoute allowedRoles={["owner"]}><Settings /></RoleRoute>} />
           <Route path="settings/go-live" element={<RoleRoute allowedRoles={["owner"]}><GoLiveChecklist /></RoleRoute>} />
