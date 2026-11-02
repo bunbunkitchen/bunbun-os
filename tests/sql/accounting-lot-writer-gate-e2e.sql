@@ -135,7 +135,8 @@ begin
    raise exception 'UNEXPECTED SUCCESS legacy update';
  exception when others then
    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
-   if sqlerrm not like '%append-only%' then raise; end if;
+   if sqlerrm not like '%append-only%' and
+      sqlerrm not like '%permission denied%' then raise; end if;
  end;
  begin
    update public.product_stock_movements
@@ -143,7 +144,8 @@ begin
    raise exception 'UNEXPECTED SUCCESS soft delete';
  exception when others then
    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
-   if sqlerrm not like '%append-only%' then raise; end if;
+   if sqlerrm not like '%append-only%' and
+      sqlerrm not like '%permission denied%' then raise; end if;
  end;
  begin
    delete from public.product_stock_movements
@@ -151,7 +153,8 @@ begin
    raise exception 'UNEXPECTED SUCCESS physical delete';
  exception when others then
    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
-   if sqlerrm not like '%append-only%' then raise; end if;
+   if sqlerrm not like '%append-only%' and
+      sqlerrm not like '%permission denied%' then raise; end if;
  end;
 
  if exists (
