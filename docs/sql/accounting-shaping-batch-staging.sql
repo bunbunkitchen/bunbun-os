@@ -255,6 +255,7 @@ declare
  v_op bunbun_accounting.shaping_operations%rowtype;
  v_split public.production_batch_splits%rowtype;
  v_frozen bunbun_accounting.frozen_lot_positions%rowtype;
+ v_converted bigint;
 begin
  select mode into v_mode from bunbun_accounting.lot_tracking_control where singleton;
  if not found then raise exception 'Lot control missing'; end if;
@@ -281,9 +282,18 @@ begin
  if not found or v_frozen.product_id<>new.product_id or
    v_frozen.source_movement_id<>new.id or
    v_frozen.original_qty<>new.qty or
-   v_frozen.available_qty<>new.qty or
    v_frozen.first_available_on<>new.movement_date then
    raise exception 'Frozen lot position is not backed by shaping movement';
+ end if;
+ -- This is a deferred trigger: by transaction commit the same new frozen
+ -- stock may already have been converted into one or more DIRECT splits.
+ -- It must still reconcile to the ORIGINAL entry, not require full stock
+ -- to remain. This is safe for same-transaction shaping+baking.
+ select coalesce(sum(qty),0) into v_converted
+ from bunbun_accounting.frozen_conversion_operations
+ where source_split_id=v_split.id and status='RECORDED';
+ if v_frozen.available_qty + v_converted <> new.qty then
+   raise exception 'Shaping frozen position differs from original minus conversions';
  end if;
  return null;
 end
