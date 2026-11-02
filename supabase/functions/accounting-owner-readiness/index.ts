@@ -38,13 +38,13 @@ const adminClient = configured
 const handler = createOwnerReadinessHandler({
   stageEnabled: configured,
   allowedOrigin,
-  async verifyUserToken(jwt) {
+  async verifyUserToken(jwt: string) {
     if (!authClient) throw new Error("Staging auth disabled");
     const { data, error } = await authClient.auth.getUser(jwt);
     if (error || !data?.user?.id) throw new Error("Invalid session");
     return { id: data.user.id };
   },
-  async loadProfile(userId) {
+  async loadProfile(userId: string) {
     if (!adminClient) throw new Error("Staging auth disabled");
     const { data, error } = await adminClient
       .from("profiles")
