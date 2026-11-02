@@ -139,7 +139,7 @@ test("stock mismatch requires note without changing old inventory", () => {
     },
   });
   assert.equal(draft.inventory.find(x => x.ingredientId === 1).difference, 1.4);
-  assert.ok(draft.issues.some(x => x.includes("selisih stok fisik")));
+  assert.ok(draft.warnings.some(x => x.includes("selisih fisik dan buku historis")));
   assert.equal(draft.canActivate, false);
 });
 test("zero physical stock is not assigned a made-up unit cost", () => {
@@ -151,5 +151,27 @@ test("zero physical stock is not assigned a made-up unit cost", () => {
     },
   });
   assert.equal(draft.balance.rawInventoryValue, 0);
+  assert.equal(draft.canActivate, false);
+});
+
+test("unreliable legacy book does not block a new verified physical baseline", () => {
+  const review = buildCutoverIngredientReview({
+    cutoverDate: "2026-11-01",
+    ingredients: [{ id: 1, nama: "Tepung", satuan: "kg" }],
+    movements: [{
+      id: 77, ingredient_id: 1, transaction_date: "2026-10-01",
+      transaction_type: "PRODUCTION_OUT", qty: 900, unit: "kg",
+    }],
+  });
+  assert.equal(review.rows[0].bookQty, null);
+  const draft = evaluateCutoverDraft({
+    review, financial: zeroFinancial(),
+    physical: { 1: { qty: "20", unitCost: "12000", costSource: "Stok opname bertanda tangan" } },
+    approvedByOwner: true,
+  });
+  assert.equal(draft.issues.length, 0);
+  assert.ok(draft.warnings.some(x => x.includes("saldo buku historis bermasalah")));
+  assert.equal(draft.balance.rawInventoryValue, 240000);
+  assert.equal(draft.status, "DRAFT_REVIEW_COMPLETE");
   assert.equal(draft.canActivate, false);
 });
