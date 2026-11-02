@@ -277,6 +277,18 @@ jobs:
           PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-staging.sql
           PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
           PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-product-adjustment-e2e.sql
+      - name: Verify concurrent adjustments cannot waste same lot stock twice
+        run: |
+          createdb bunbun_adjust_race_ci
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-concurrency-seed.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-staging.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-adjustment-race-seed.sql
+          PGDATABASE=bunbun_adjust_race_ci bash tests/sql/accounting-adjustment-race.sh
 
   edge-owner-auth:
     name: Staging Owner Edge typecheck
