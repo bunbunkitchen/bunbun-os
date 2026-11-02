@@ -103,6 +103,12 @@ const menus = [
     roles: ["owner"],
   },
   {
+    name: "Keuntungan & Pertumbuhan",
+    path: "/finance/business-health",
+    icon: <MdDashboard />,
+    roles: ["owner"],
+  },
+  {
     name: "Persiapan Saldo Awal",
     path: "/finance/cutover",
     icon: <MdAttachMoney />,
