@@ -277,6 +277,13 @@ begin
       raise exception 'Lot allocations do not equal product release quantity';
     end if;
 
+    -- Only for the current SQL transaction: the trigger allows this exact
+    -- operation's stock INSERT; deferred constraint then proves its complete
+    -- per-lot allocations at commit. Marker alone is not authorization.
+    perform set_config(
+      'bunbun_accounting.lot_write_operation', p_operation_key::text, true
+    );
+
     insert into public.product_stock_movements (
       movement_date, movement_type, product_id, qty, unit, operation_key,
       sale_id, notes, is_deleted, created_by, updated_by
