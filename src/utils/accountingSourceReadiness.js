@@ -9,6 +9,8 @@
  * a café deposit in October might pay a September sale, while a stock dispatch
  * tagged with a sale ID is not independent proof that cash was collected.
  */
+import { isValidIsoDate } from "./hppCutoverOpening.js";
+
 const TABLES = Object.freeze([
   "sales", "incomes", "expenses", "purchases",
   "productMovements", "ingredientMovements",
@@ -54,9 +56,8 @@ function auditRows(name, input, month, dateField) {
     if (row.is_deleted === true) {
       throw new Error("Data " + name + " terhapus tidak boleh dimasukkan.");
     }
-    if (typeof row[dateField] !== "string" ||
-      row[dateField].slice(0, 7) !== month ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(row[dateField])) {
+    if (!isValidIsoDate(row[dateField]) ||
+      row[dateField].slice(0, 7) !== month) {
       throw new Error("Ada tanggal " + name + " di luar bulan audit.");
     }
   }
@@ -97,13 +98,14 @@ function byField(rows, key) {
  * do not certify actual sales, cash settlement, inventory costing or opening
  * balances. This is a preparatory diagnostic, NOT a profitability calculation.
  */
-export function buildAccountingSourceReadiness({
-  month, sales, incomes, expenses, purchases,
-  productMovements, ingredientMovements,
-}) {
+export function buildAccountingSourceReadiness(sources) {
+  const {
+    month, sales, incomes, expenses, purchases,
+    productMovements, ingredientMovements,
+  } = sources ?? {};
   if (!validReportMonth(month)) throw new Error("Pilih bulan audit yang valid.");
   for (const table of TABLES) {
-    if (!Array.isArray(arguments[0]?.[table])) {
+    if (!Array.isArray(sources?.[table])) {
       throw new Error("Sumber " + table + " belum dimuat seluruhnya.");
     }
   }
