@@ -33,6 +33,7 @@ do $strict$
 declare
  v_owner uuid := '11111111-1111-4111-8111-111111111111';
  v_key uuid := 'c1111111-1111-4111-8111-111111111111';
+ v_forged uuid := 'e1111111-1111-4111-8111-111111111111';
  v_movement_id bigint;
  v_count integer;
 begin
@@ -106,6 +107,32 @@ begin
  exception when others then
    if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
    if sqlerrm not like '%recorded lot release operation%' then raise; end if;
+ end;
+
+ -- Even if someone with elevated service credentials forges a matching
+ -- operation header AND matching allocation row, it must not commit unless
+ -- the real lot position is decremented by exactly that allocation total.
+ begin
+   insert into bunbun_accounting.lot_release_operations
+     (operation_key,payload_fingerprint,movement_date,destination,
+      destination_type,evidence_ref,status,actor_id)
+   values
+     (v_forged,repeat('a',32),'2026-11-07','The Public Coffee',
+      'CAFE_CONSIGNMENT','FAKE-RELEASE-DOCUMENT','RECORDED',v_owner);
+   perform set_config(
+     'bunbun_accounting.lot_write_operation',v_forged::text,true);
+   insert into public.product_stock_movements
+     (movement_date,movement_type,product_id,qty,operation_key,sale_id)
+   values ('2026-11-07','CAFE_OUT',1,1,v_forged,null)
+   returning id into v_movement_id;
+   insert into bunbun_accounting.lot_release_allocations
+     (operation_key,stock_movement_id,lot_key,product_id,qty)
+   values (v_forged,v_movement_id,'split:101',1,1);
+   execute 'SET CONSTRAINTS verify_lot_allocation_before_commit IMMEDIATE';
+   raise exception 'UNEXPECTED SUCCESS forged lot position';
+ exception when others then
+   if sqlerrm like 'UNEXPECTED SUCCESS%' then raise; end if;
+   if sqlerrm not like '%Lot position does not reconcile%' then raise; end if;
  end;
 
  -- A legitimate private function uses a transaction marker, locks products/
