@@ -115,6 +115,12 @@ const menus = [
     roles: ["owner"],
   },
   {
+    name: "Audit Penjualan & Lot",
+    path: "/finance/sale-lot-audit",
+    icon: <MdAssessment />,
+    roles: ["owner"],
+  },
+  {
     name: "Audit Sumber Keuangan",
     path: "/finance/source-audit",
     icon: <MdAssessment />,
