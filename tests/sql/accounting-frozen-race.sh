@@ -43,7 +43,7 @@ state="$(psql -X -t -A -v ON_ERROR_STOP=1 -c "
    (select count(*) from public.product_stock_movements
      where movement_type='FROZEN_OUT'),
    (select count(*) from public.production_batch_splits
-     where source_split_id=200 and route='DIRECT'),
+     where source_split_id=200 and route='DIRECT' and status='PROOFING'),
    (select count(*) from bunbun_accounting.frozen_conversion_operations
      where operation_key='22222222-2222-4222-8222-555555555555')
 ")"
