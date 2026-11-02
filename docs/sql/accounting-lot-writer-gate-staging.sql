@@ -85,6 +85,9 @@ declare
  v_header bunbun_accounting.lot_release_operations%rowtype;
  v_qty bigint;
  v_lines integer;
+ v_lot_key text;
+ v_lot_used bigint;
+ v_lot_decrement bigint;
 begin
  select * into v_control from bunbun_accounting.lot_tracking_control
  where singleton;
@@ -109,6 +112,25 @@ begin
  if v_lines <= 0 or v_qty <> new.qty then
    raise exception 'Tracked CAFE_OUT has incomplete or incompatible lot allocations';
  end if;
+
+ -- Ensure every lot position reflects ALL historical allocations exactly.
+ -- A service role that can write an operations header and allocation rows
+ -- cannot forge a stock movement without decreasing the matching lot.
+ for v_lot_key in
+   select distinct lot_key
+   from bunbun_accounting.lot_release_allocations
+   where stock_movement_id=new.id
+ loop
+   select original_qty - available_qty into v_lot_decrement
+   from bunbun_accounting.finished_lot_positions
+   where lot_key=v_lot_key;
+   select coalesce(sum(qty),0) into v_lot_used
+   from bunbun_accounting.lot_release_allocations
+   where lot_key=v_lot_key;
+   if v_lot_decrement is null or v_lot_decrement <> v_lot_used then
+     raise exception 'Lot position does not reconcile with recorded allocations';
+   end if;
+ end loop;
  return null;
 end
 $fn$;
