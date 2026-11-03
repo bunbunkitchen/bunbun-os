@@ -5,6 +5,7 @@ const TABLE_NAME = "expenses";
 function mapExpense(row) {
   return {
     id: row.id,
+    purchaseId: row.purchase_id ?? null,
     tanggal: row.tanggal,
     kategori: row.kategori,
     nominal: Number(row.nominal),

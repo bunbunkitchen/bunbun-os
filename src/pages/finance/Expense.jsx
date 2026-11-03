@@ -8,6 +8,9 @@ import MasterPage from "../../components/ui/MasterPage";
 import Currency from "../../components/ui/Currency";
 import LoadingState from "../../components/ui/LoadingState";
 import ExpenseForm from "../../components/forms/ExpenseForm";
+import ExpenseAccountingPanel from "../../components/accounting/ExpenseAccountingPanel";
+import { purchaseAccountingAvailable } from "../../services/accountingPurchaseService";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   createExpense,
@@ -17,6 +20,7 @@ import {
 } from "../../services/expenseService";
 
 export default function Expense() {
+  const { role } = useAuth();
   const [expenses, setExpenses] =
     useState([]);
 
@@ -161,6 +165,9 @@ export default function Expense() {
           />
         </p>
       </div>
+
+      {role === "owner" && purchaseAccountingAvailable && <ExpenseAccountingPanel expenses={expenses}
+        onPosted={async () => setExpenses(await getAllExpenses())} />}
 
       <MasterPage
         title="Pengeluaran"

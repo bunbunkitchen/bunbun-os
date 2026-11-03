@@ -5,11 +5,13 @@ import {
 
 import Input from "../ui/Input";
 import Button from "../ui/Button";
+import { purchaseAccountingAvailable } from "../../services/accountingPurchaseService";
 
 const categories = [
   "Gaji",
   "Bahan Baku",
   "Maintenance",
+  ...(purchaseAccountingAvailable ? ["Utilitas", "Sewa", "Operasional Lain"] : []),
 ];
 
 export default function ExpenseForm({
