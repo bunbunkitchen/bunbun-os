@@ -29,3 +29,8 @@ PostgreSQL rollback suite checks real tables, source fingerprints stable across 
 Authenticated Owner browser submission still requires a real-session acceptance check; SQL/CI success is not browser-session evidence.
 
 Cloud validation: the full cafe report rollback suite passed on isolated staging; test report, source, income and journal counts returned to zero. Edge `accounting-cafe-report` v1 is ACTIVE with JWT verification. Security advisors show only the four intentional new private RLS/no-browser-policy tables (43 total informational notices); existing warnings remain 17 definer grants and one Auth password-protection setting, with no new definer exposure. Local total: 357 Node tests pass, eight source-accounting PostgreSQL suites pass, targeted lint and Vite build pass. CI/deployment completion is checkpointed separately.
+
+
+## Subsequent implementation
+
+The Owner revenue/receipt bridge is now implemented separately; see `docs/accounting-cafe-ledger-status.md` for the current journal workflow and remaining advance/waste/correction boundaries. The raw factual report API remains non-posting and does not itself assert financial close readiness.
