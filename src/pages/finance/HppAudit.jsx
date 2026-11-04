@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getMonthlyHppAudit } from "../../services/hppAuditService";
 import { getBatchLotSourceAudit } from "../../services/accountingBatchLotReadService";
+import ProductionAccountingPanel from "../../components/accounting/ProductionAccountingPanel";
 import MaterialAccountingPanel from "../../components/accounting/MaterialAccountingPanel";
 import { purchaseAccountingAvailable } from "../../services/accountingPurchaseService";
 import HistoricalInventoryAudit from "../../components/hpp/HistoricalInventoryAudit";
@@ -211,6 +212,8 @@ export default function HppAudit() {
       </section>
       {purchaseAccountingAvailable && batchInfo && <MaterialAccountingPanel key={batchInfo.batch.id}
         materials={batchInfo.materials} batchCode={batchInfo.batch.kode} />}
+      {purchaseAccountingAvailable && batchInfo && <ProductionAccountingPanel key={"cost-"+batchInfo.batch.id}
+        batchId={batchInfo.batch.id} batchCode={batchInfo.batch.kode} expenses={audit?.expensesReview.rows || []} />}
     </div>
   );
 }

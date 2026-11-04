@@ -368,4 +368,4 @@ jobs:
         with:
           deno-version: v2.x
       - name: Typecheck staging-only Edge Function
-        run: deno check supabase/functions/accounting-material/index.ts supabase/functions/accounting-revenue/index.ts supabase/functions/accounting-expense/index.ts supabase/functions/accounting-purchase/index.ts supabase/functions/accounting-owner-readiness/index.ts supabase/functions/accounting-owner-monthly-report/index.ts supabase/functions/accounting-owner-source-preview/index.ts
+        run: deno check supabase/functions/accounting-production/index.ts supabase/functions/accounting-material/index.ts supabase/functions/accounting-revenue/index.ts supabase/functions/accounting-expense/index.ts supabase/functions/accounting-purchase/index.ts supabase/functions/accounting-owner-readiness/index.ts supabase/functions/accounting-owner-monthly-report/index.ts supabase/functions/accounting-owner-source-preview/index.ts

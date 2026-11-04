@@ -11,11 +11,11 @@ try {
   const files = ['docs/sql/staging-production-baseline.sql','docs/sql/cloud-ledger-core-staging.sql',
     'docs/sql/cloud-purchase-posting-staging.sql','docs/sql/cloud-purchase-correction-staging.sql',
     'docs/sql/cloud-purchase-service-staging.sql','docs/sql/cloud-period-expense-staging.sql',
-    'docs/sql/cloud-sale-settlement-staging.sql','docs/sql/cloud-material-wip-staging.sql'];
+    'docs/sql/cloud-sale-settlement-staging.sql','docs/sql/cloud-material-wip-staging.sql','docs/sql/cloud-production-cost-staging.sql'];
   for (const file of files) { await db.exec(await readFile(file,'utf8')); console.log('Loaded',file); }
   await db.exec(await readFile('tests/sql/source-accounting-local-seed.sql','utf8'));
   const tests = ['tests/sql/cloud-purchase-posting-rollback.sql','tests/sql/cloud-purchase-correction-rollback.sql',
-    'tests/sql/cloud-period-expense-rollback.sql','tests/sql/cloud-sale-settlement-rollback.sql','tests/sql/cloud-material-wip-rollback.sql'];
+    'tests/sql/cloud-period-expense-rollback.sql','tests/sql/cloud-sale-settlement-rollback.sql','tests/sql/cloud-material-wip-rollback.sql','tests/sql/cloud-production-cost-rollback.sql'];
   for (const test of tests) {
     const results = await db.exec(await readFile(test,'utf8'));
     console.log(test, JSON.stringify(results.at(-1).rows));
@@ -25,6 +25,6 @@ try {
   if (Object.values(empty.rows[0]).some(x=>Number(x)!==0)) throw new Error('Test fixtures escaped rollback');
   console.log('PASS: all financial and operational fixtures rolled back; local PostgreSQL only');
 } catch(error) {
-  console.error(error.message, error.where || '');
+  console.error(error.message, error.where || '', error.position || '');
   process.exitCode=1;
 } finally { await db.close(); }
