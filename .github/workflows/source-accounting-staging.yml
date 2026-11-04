@@ -9,6 +9,7 @@ on:
       - 'tests/sql/source-settlement-*'
       - 'tests/sql/source-material-*'
       - 'tests/sql/source-production-*'
+      - 'tests/sql/source-product-flow-*'
       - 'tests/accounting*Review.test.js'
       - 'supabase/functions/_shared/accounting*Review.js'
       - 'supabase/functions/accounting-purchase/**'
@@ -16,6 +17,7 @@ on:
       - 'supabase/functions/accounting-revenue/**'
       - 'supabase/functions/accounting-material/**'
       - 'supabase/functions/accounting-production/**'
+      - 'supabase/functions/accounting-product-flow/**'
       - '.github/workflows/source-accounting-staging.yml'
   workflow_dispatch:
 permissions:
@@ -58,6 +60,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/source-accounting-local-bootstrap.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/staging-production-baseline.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-ledger-core-staging.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-stock-writers-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-purchase-posting-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-purchase-correction-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-purchase-service-staging.sql
@@ -65,6 +68,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-sale-settlement-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-material-wip-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-production-cost-staging.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-product-cost-flow-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/source-accounting-local-seed.sql
       - name: Test real-source purchasing, corrections and period expenses
         run: |
@@ -74,6 +78,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-sale-settlement-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-material-wip-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-production-cost-rollback.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-product-cost-flow-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF EXISTS(SELECT 1 FROM public.expenses) OR EXISTS(SELECT 1 FROM public.purchases) OR EXISTS(SELECT 1 FROM bunbun_accounting.journals) THEN RAISE EXCEPTION 'Test fixtures escaped rollback'; END IF; END \$\$;"
       - name: Test simultaneous material usage in a separate disposable database
         env:
@@ -87,6 +92,12 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -c 'CREATE DATABASE bunbun_production_ci TEMPLATE bunbun_source_ci'
           PGDATABASE=bunbun_production_ci bash tests/sql/source-production-race.sh
+      - name: Test simultaneous sold-cost posting against one valued lot
+        env:
+          BUNBUN_SOURCE_ACCOUNTING_CI: isolated-local
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -c 'CREATE DATABASE bunbun_product_flow_ci TEMPLATE bunbun_source_ci'
+          PGDATABASE=bunbun_product_flow_ci bash tests/sql/source-product-flow-race.sh
       - name: Test simultaneous receipt allocations in two independent sessions
         env:
           BUNBUN_SOURCE_ACCOUNTING_CI: isolated-local

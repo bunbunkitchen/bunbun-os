@@ -113,7 +113,10 @@ BEGIN
  VALUES('2026-11-05','FROZEN_OUT',910001,910002,1,gen_random_uuid()),('2026-11-05','FINISHED_IN',910001,910004,1,gen_random_uuid());
  IF (SELECT count(*) FROM bunbun_accounting.production_lot_values)<>3
  THEN RAISE EXCEPTION 'Derived frozen output duplicated root production cost'; END IF;
- UPDATE bunbun_accounting.periods SET status='CLOSED' WHERE id='91000000-0000-4000-8000-000000000001';
+ BEGIN
+   UPDATE bunbun_accounting.periods SET status='CLOSED' WHERE id='91000000-0000-4000-8000-000000000001';
+   RAISE EXCEPTION 'Unvalued frozen conversion closed';
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Product cost movements require reconciliation before close' THEN RAISE; END IF; END;
 END $$;
 RESET ROLE;
 SET LOCAL ROLE authenticated;
