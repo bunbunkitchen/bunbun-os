@@ -103,14 +103,13 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -c 'CREATE DATABASE bunbun_product_flow_ci TEMPLATE bunbun_source_ci'
           PGDATABASE=bunbun_product_flow_ci bash tests/sql/source-product-flow-race.sh
-      - name: Test simultaneous receipt allocations in two independent sessions
-        env:
-          BUNBUN_SOURCE_ACCOUNTING_CI: isolated-local
-        run: bash tests/sql/source-settlement-race.sh
-
       - name: Test simultaneous cafe reports sharing one net receipt
         env:
           BUNBUN_SOURCE_ACCOUNTING_CI: isolated-local
         run: |
           psql -X -v ON_ERROR_STOP=1 -c 'CREATE DATABASE bunbun_cafe_report_ci TEMPLATE bunbun_source_ci'
           PGDATABASE=bunbun_cafe_report_ci bash tests/sql/source-cafe-report-race.sh
+      - name: Test simultaneous receipt allocations in two independent sessions
+        env:
+          BUNBUN_SOURCE_ACCOUNTING_CI: isolated-local
+        run: bash tests/sql/source-settlement-race.sh
