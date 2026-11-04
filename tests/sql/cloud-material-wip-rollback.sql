@@ -43,6 +43,14 @@ BEGIN
  VALUES(opening,'LOCAL-MATERIAL-OPENING',iid,'RAW',3,1,'g');
  PERFORM bunbun_accounting.post_reviewed_journal(opening,actor);
  BEGIN
+   INSERT INTO bunbun_accounting.stock_cost_movements(journal_id,source_key,ingredient_id,valuation_class,quantity_base,value_delta,base_unit)
+   VALUES(opening,'LOCAL-NONFINITE-COST',iid,'RAW',0,'NaN','g');
+   s:=public.accounting_material_service('review','{"transactionId":"908001"}',actor);
+   IF (s->>'mayConfirm')::boolean IS DISTINCT FROM false OR s->>'actualMaterialCost' IS NOT NULL
+   THEN RAISE EXCEPTION 'Nonfinite material cost accepted'; END IF;
+   RAISE EXCEPTION 'TEST_ROLLBACK';
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'TEST_ROLLBACK' THEN RAISE; END IF; END;
+ BEGIN
    UPDATE bunbun_accounting.periods SET status='CLOSED' WHERE id='90800000-0000-4000-8000-000000000001';
    s:=public.accounting_material_service('review','{"transactionId":"908001"}',actor);
    IF (s->>'mayConfirm')::boolean IS DISTINCT FROM false THEN RAISE EXCEPTION 'Closed period accepted'; END IF;

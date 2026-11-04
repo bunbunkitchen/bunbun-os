@@ -189,8 +189,12 @@ BEGIN
  WHERE m.ingredient_id=r.ingredient_id AND m.valuation_class='RAW' AND j.status='POSTED';
  IF EXISTS(SELECT 1 FROM bunbun_accounting.stock_cost_movements m JOIN bunbun_accounting.journals j ON j.id=m.journal_id
    WHERE m.ingredient_id=r.ingredient_id AND m.valuation_class='RAW' AND j.status='POSTED' AND m.base_unit<>base)
- OR pool_qty<qty OR pool_value<=0 THEN blockers:=blockers||'"Jumlah, satuan, atau nilai bahan yang dibuktikan belum cukup."'::jsonb; END IF;
- cost:=CASE WHEN pool_qty>0 THEN CASE WHEN qty=pool_qty THEN pool_value ELSE trunc(pool_value*qty/pool_qty,2) END END;
+ OR pool_qty<qty OR pool_value<=0 OR pool_qty::text IN('NaN','Infinity','-Infinity')
+ OR pool_value::text IN('NaN','Infinity','-Infinity')
+ THEN blockers:=blockers||'"Jumlah, satuan, atau nilai bahan yang dibuktikan belum cukup."'::jsonb; END IF;
+ cost:=CASE WHEN pool_qty>0 AND pool_qty::text NOT IN('NaN','Infinity','-Infinity')
+   AND pool_value::text NOT IN('NaN','Infinity','-Infinity')
+   THEN CASE WHEN qty=pool_qty THEN pool_value ELSE trunc(pool_value*qty/pool_qty,2) END END;
  IF cost IS NULL OR cost<=0 THEN blockers:=blockers||'"Biaya pemakaian belum dapat dihitung dalam presisi sen."'::jsonb; END IF;
  SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.transaction_date,x.id),'[]') INTO prior
  FROM public.inventory_transactions x WHERE x.ingredient_id=r.ingredient_id AND NOT x.is_deleted
