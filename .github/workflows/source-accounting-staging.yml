@@ -7,11 +7,13 @@ on:
       - 'tests/sql/cloud-*.sql'
       - 'tests/sql/source-accounting-*.sql'
       - 'tests/sql/source-settlement-*'
+      - 'tests/sql/source-material-*'
       - 'tests/accounting*Review.test.js'
       - 'supabase/functions/_shared/accounting*Review.js'
       - 'supabase/functions/accounting-purchase/**'
       - 'supabase/functions/accounting-expense/**'
       - 'supabase/functions/accounting-revenue/**'
+      - 'supabase/functions/accounting-material/**'
       - '.github/workflows/source-accounting-staging.yml'
   workflow_dispatch:
 permissions:
@@ -59,6 +61,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-purchase-service-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-period-expense-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-sale-settlement-staging.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-material-wip-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/source-accounting-local-seed.sql
       - name: Test real-source purchasing, corrections and period expenses
         run: |
@@ -66,7 +69,14 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-purchase-correction-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-period-expense-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-sale-settlement-rollback.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-material-wip-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF EXISTS(SELECT 1 FROM public.expenses) OR EXISTS(SELECT 1 FROM public.purchases) OR EXISTS(SELECT 1 FROM bunbun_accounting.journals) THEN RAISE EXCEPTION 'Test fixtures escaped rollback'; END IF; END \$\$;"
+      - name: Test simultaneous material usage in a separate disposable database
+        env:
+          BUNBUN_SOURCE_ACCOUNTING_CI: isolated-local
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -c 'CREATE DATABASE bunbun_material_ci TEMPLATE bunbun_source_ci'
+          PGDATABASE=bunbun_material_ci bash tests/sql/source-material-race.sh
       - name: Test simultaneous receipt allocations in two independent sessions
         env:
           BUNBUN_SOURCE_ACCOUNTING_CI: isolated-local

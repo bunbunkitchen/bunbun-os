@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getMonthlyHppAudit } from "../../services/hppAuditService";
 import { getBatchLotSourceAudit } from "../../services/accountingBatchLotReadService";
+import MaterialAccountingPanel from "../../components/accounting/MaterialAccountingPanel";
+import { purchaseAccountingAvailable } from "../../services/accountingPurchaseService";
 import HistoricalInventoryAudit from "../../components/hpp/HistoricalInventoryAudit";
 
 const rupiah = n => Number(n || 0).toLocaleString("id-ID", {
@@ -60,7 +62,7 @@ export default function HppAudit() {
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <strong>Belum menjadi HPP aktual.</strong> Pengeluaran kas berbeda dari biaya produksi.
         Gaji, gas, kemasan, perlengkapan, dan aset perlu diklasifikasikan serta direkonsiliasi dahulu.
-        Halaman ini tidak menyimpan atau mengubah transaksi.
+        Panel audit membaca data. Panel biaya bahan staging di bawah memerlukan pemeriksaan dan konfirmasi Owner sebelum mencatat jurnal.
       </div>
       <div className="rounded-xl border border-[#D9D8D0] bg-white p-5">
         <label htmlFor="audit-month" className="mr-3 text-sm font-semibold">Bulan</label>
@@ -207,6 +209,8 @@ export default function HppAudit() {
           </ul>}
         </div>}
       </section>
+      {purchaseAccountingAvailable && batchInfo && <MaterialAccountingPanel key={batchInfo.batch.id}
+        materials={batchInfo.materials} batchCode={batchInfo.batch.kode} />}
     </div>
   );
 }
