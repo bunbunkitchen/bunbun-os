@@ -1,0 +1,11 @@
+# Gifted ingredient receipts — isolated staging
+
+Owner clarified that purchase14 (sugar1kg,17July2026,total0) was a personal-stock gift, not an unpaid or missing-price purchase. This source interpretation is recorded in the working runbook; the historical production purchase has not been altered. Future personal gifts, supplier bonuses and third-party gifts belong in the existing non-purchase stock addition flow.
+
+The form now has an explicit **Hadiah / Oleh-oleh** source. Quantity/unit/date/source and optional donor/evidence note are retained. The positive per-unit field is labeled **Nilai Acuan per Satuan**, and the summary states that it is neither cash paid nor an approved accounting inventory valuation. Actual cash expense is0; this flow creates no purchase, payable, income or accounting journal.
+
+The existing database function previously overwrote `ingredients.harga` with the entered stock-reference value. `cloud-nonpurchase-reference-staging.sql` removes that side effect for every non-purchase source. Recipe master pricing remains independent of free receipts, unit changes and manual reference entries. Existing active Owner authorization, validation, idempotency and function ACLs remain unchanged; this does not expand RPC access. No extra privileged function or table is added.
+
+A new rollback regression records a synthetic gift with a reference999 against master100 and proves master100 remains, stock increases exactly once on retry, source/quantity/reference persist, and no expense/purchase/journal appears. Revoked Owner, Helper and anon are denied. It runs with the existing11 source suites (12 total), local ephemeral PostgreSQL and PostgreSQL16/17 CI. Cloud verification also rolls back all fixture users/materials/movements.
+
+Scope: operational receipt recording only, not automated gift contribution accounting, tax valuation or actual-cost lot posting. `unit_value` is an operational reference, not evidence of actual acquisition cost. Existing actual-cost guards must not treat it as a paid purchase or silently substitute recipe master price. Opening material valuation and the still-unapproved opening ledger remain separate. Production/main and historical business rows are unchanged.

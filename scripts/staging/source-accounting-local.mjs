@@ -15,13 +15,13 @@ async function readSql(file, stack=[]) {
 }
 try {
   await db.exec(await readFile('tests/sql/source-accounting-local-bootstrap.sql','utf8'));
-  const files = ['docs/sql/staging-production-baseline.sql','docs/sql/cloud-ledger-core-staging.sql','docs/sql/cloud-stock-writers-staging.sql',
+  const files = ['docs/sql/staging-production-baseline.sql','docs/sql/cloud-nonpurchase-reference-staging.sql','docs/sql/cloud-ledger-core-staging.sql','docs/sql/cloud-stock-writers-staging.sql',
     'docs/sql/cloud-purchase-posting-staging.sql','docs/sql/cloud-purchase-correction-staging.sql',
     'docs/sql/cloud-purchase-service-staging.sql','docs/sql/cloud-period-expense-staging.sql',
     'docs/sql/cloud-sale-settlement-staging.sql','docs/sql/cloud-material-wip-staging.sql','docs/sql/cloud-production-cost-staging.sql','docs/sql/cloud-product-cost-flow-staging.sql','docs/sql/cloud-cafe-report-staging.sql','docs/sql/cloud-cafe-ledger-staging.sql','docs/sql/cloud-cafe-exceptions-staging.sql','docs/sql/cloud-owner-financial-report-staging.sql'];
   for (const file of files) { await db.exec(await readSql(file)); console.log('Loaded',file); }
   await db.exec(await readFile('tests/sql/source-accounting-local-seed.sql','utf8'));
-  const tests = ['tests/sql/cloud-purchase-posting-rollback.sql','tests/sql/cloud-purchase-correction-rollback.sql',
+  const tests = ['tests/sql/cloud-nonpurchase-reference-rollback.sql','tests/sql/cloud-purchase-posting-rollback.sql','tests/sql/cloud-purchase-correction-rollback.sql',
     'tests/sql/cloud-period-expense-rollback.sql','tests/sql/cloud-sale-settlement-rollback.sql','tests/sql/cloud-material-wip-rollback.sql','tests/sql/cloud-production-cost-rollback.sql','tests/sql/cloud-product-cost-flow-rollback.sql','tests/sql/cloud-cafe-report-rollback.sql','tests/sql/cloud-cafe-ledger-rollback.sql','tests/sql/cloud-cafe-exceptions-rollback.sql','tests/sql/cloud-owner-financial-report-rollback.sql'];
   for (const test of tests) {
     const results = await db.exec(await readSql(test));

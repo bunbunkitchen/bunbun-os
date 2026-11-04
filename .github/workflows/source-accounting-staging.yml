@@ -66,6 +66,7 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/source-accounting-local-bootstrap.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/staging-production-baseline.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-nonpurchase-reference-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-ledger-core-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-stock-writers-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-purchase-posting-staging.sql
@@ -83,6 +84,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/source-accounting-local-seed.sql
       - name: Test real-source purchasing, expenses, cafe reports and ledger posting
         run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-nonpurchase-reference-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-purchase-posting-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-purchase-correction-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-period-expense-rollback.sql
