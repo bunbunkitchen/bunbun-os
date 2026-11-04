@@ -24,7 +24,10 @@ import {
 
 import { useAuth } from "../../context/AuthContext";
 
+import {purchaseAccountingAvailable} from "../../services/accountingPurchaseService";
+
 const menus = [
+  ...(purchaseAccountingAvailable ? [{name: "Rekonsiliasi Kafe", path: "/finance/cafe-reconciliation", icon: <MdAssessment />, roles: ["owner"]}] : []),
   {
     name: "Dashboard",
     path: "/",

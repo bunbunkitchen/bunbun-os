@@ -18,6 +18,7 @@ import Inventory from "../pages/inventory/Inventory";
 import ProductStock from "../pages/inventory/ProductStock";
 import Purchasing from "../pages/purchasing/Purchasing";
 import Maintenance from "../pages/maintenance/Maintenance";
+import CafeReconciliation from "../pages/finance/CafeReconciliation";
 import Income from "../pages/finance/Income";
 import Expense from "../pages/finance/Expense";
 import HppAudit from "../pages/finance/HppAudit";
@@ -65,6 +66,7 @@ export default function AppRoutes() {
           <Route path="purchasing" element={<RoleRoute allowedRoles={["owner", "baker"]}><Purchasing /></RoleRoute>} />
           <Route path="maintenance" element={<RoleRoute allowedRoles={["owner", "baker"]}><Maintenance /></RoleRoute>} />
 
+          <Route path="finance/cafe-reconciliation" element={<RoleRoute allowedRoles={["owner"]}><CafeReconciliation /></RoleRoute>} />
           <Route path="finance/income" element={<RoleRoute allowedRoles={["owner", "cashier"]}><Income /></RoleRoute>} />
 
           {/* Penjualan dapat diinput oleh Owner dan Baker */}

@@ -1,0 +1,60 @@
+-- Synthetic report records only. Every report, movement and cashbook row rolls back.
+BEGIN;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM bunbun_accounting.cafe_reports) THEN RAISE EXCEPTION 'Empty report store required'; END IF; END $$;
+INSERT INTO public.products(id,sku,nama) OVERRIDING SYSTEM VALUE VALUES(930001,'LOCAL-CAFE-REPORT','Synthetic cafe product');
+INSERT INTO public.incomes(id,tanggal,total_penjualan,persentase_bunbun,pemasukan_bunbun,keterangan) OVERRIDING SYSTEM VALUE VALUES(930001,'2026-12-02',120,70,120,'Synthetic net cafe deposit');
+INSERT INTO public.product_stock_movements(id,movement_date,movement_type,product_id,qty,operation_key) OVERRIDING SYSTEM VALUE VALUES
+ (930001,'2026-11-06','CAFE_OUT',930001,6,gen_random_uuid()),(930002,'2026-11-09','CAFE_IN',930001,1,gen_random_uuid());
+SET LOCAL ROLE service_role;
+DO $$ DECLARE actor uuid:='2375b60c-c418-47c2-b157-af80b262fadf'; inp jsonb; s jsonb; p jsonb; result jsonb; replay jsonb; first_id uuid; second_id uuid; before_count bigint;
+BEGIN
+ inp:='{"month":"2026-11","cafeKey":"PUBLIC_HUB","asOfDate":"2026-12-05","expectedReportId":null,"openingEvidenceRef":"SYNTHETIC-OPENING-COUNT","evidenceRef":"SYNTHETIC-CAFE-REPORT","factsConfirmed":true,"confirmedUnpaid":"0","confirmedCredit":"0","shipmentIds":["930001"],"returnIds":["930002"],"receipts":[{"incomeId":"930001","amount":"80"}],"rows":[{"productId":"930001","openingQty":"0","receivedQty":"6","regularQty":"2","bundleQty":"1","discountQty":"1","wasteQty":"0","returnedQty":"1","closingQty":"1","regularNet":"40","bundleNet":"20","discountNet":"20"}]}';
+ s:=public.accounting_cafe_report_service('review',inp,actor);
+ IF s->'incomes'->0->>'net'<>'120.00' THEN RAISE EXCEPTION 'Net deposit discounted a second time'; END IF;
+ p:=jsonb_build_object('input',inp,'fingerprint',s->>'fingerprint','operationKey',gen_random_uuid(),'summary','{"readyToClose":false,"accountingStatus":"REQUIRES_LEDGER_RECONCILIATION","status":"FACTS_RECONCILED"}'::jsonb);
+ result:=public.accounting_cafe_report_service('record',p,actor); first_id:=(result->>'id')::uuid;
+ s:=bunbun_accounting.cafe_report_sources(inp);
+ IF s->>'fingerprint' IS DISTINCT FROM p->>'fingerprint' THEN RAISE EXCEPTION 'Recording changed effective source fingerprint'; END IF;
+ s:=public.accounting_cafe_report_service('inspect','{"month":"2026-11","cafeKey":"PUBLIC_HUB"}',actor);
+ IF (s->>'sourceChanged')::boolean OR s->'currentReport'->>'id'<>first_id::text OR jsonb_array_length(s->'history')<>1 THEN RAISE EXCEPTION 'Stored report inspection wrong'; END IF;
+ IF (SELECT amount FROM bunbun_accounting.cafe_report_receipts WHERE report_id=first_id)<>80 THEN RAISE EXCEPTION 'Linked receipt amount changed'; END IF;
+ inp:=jsonb_set(inp,'{expectedReportId}',to_jsonb(first_id));
+ inp:=jsonb_set(inp,'{rows,0,regularQty}','"1"');inp:=jsonb_set(inp,'{rows,0,bundleQty}','"2"');
+ s:=public.accounting_cafe_report_service('review',inp,actor);
+ result:=public.accounting_cafe_report_service('record',p||jsonb_build_object('input',inp,'fingerprint',s->>'fingerprint','operationKey',gen_random_uuid()),actor);second_id:=(result->>'id')::uuid;
+ IF result->>'revision'<>'2' OR (SELECT count(*) FROM bunbun_accounting.cafe_reports)<>2 THEN RAISE EXCEPTION 'Revision history lost'; END IF;
+ replay:=public.accounting_cafe_report_service('record',p,actor);
+ IF replay->>'id'<>first_id::text OR (SELECT report_id FROM bunbun_accounting.current_cafe_reports WHERE month='2026-11-01' AND cafe_key='PUBLIC_HUB')<>second_id THEN RAISE EXCEPTION 'Replay reset latest revision'; END IF;
+ IF (SELECT sum(l.amount) FROM bunbun_accounting.cafe_report_receipts l JOIN bunbun_accounting.current_cafe_reports c ON c.report_id=l.report_id WHERE l.income_id=930001)<>80 THEN RAISE EXCEPTION 'Revision counted bank deposit twice'; END IF;
+ -- Other scopes see only 40 remaining, regardless of the original 70% metadata.
+ inp:=jsonb_set(inp,'{cafeKey}','"PUBLIC_COFFEE"');inp:=jsonb_set(inp,'{expectedReportId}','null');inp:=jsonb_set(inp,'{shipmentIds}','[]');inp:=jsonb_set(inp,'{returnIds}','[]');inp:=jsonb_set(inp,'{receipts,0,amount}','"50"');
+ BEGIN PERFORM public.accounting_cafe_report_service('review',inp,actor);RAISE EXCEPTION 'Overallocated receipt accepted';
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Receipt allocation exceeds net source' THEN RAISE;END IF;END;
+ inp:=jsonb_set(inp,'{receipts,0,amount}','"40"');s:=public.accounting_cafe_report_service('review',inp,actor);
+ result:=public.accounting_cafe_report_service('record',p||jsonb_build_object('input',inp,'fingerprint',s->>'fingerprint','operationKey',gen_random_uuid()),actor);
+ IF (SELECT sum(l.amount) FROM bunbun_accounting.cafe_report_receipts l JOIN bunbun_accounting.current_cafe_reports c ON c.report_id=l.report_id WHERE l.income_id=930001)<>120 THEN RAISE EXCEPTION 'Cross-cafe receipt split incorrect'; END IF;
+ BEGIN UPDATE public.incomes SET pemasukan_bunbun=100 WHERE id=930001;RAISE EXCEPTION 'Linked net income mutated';
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Income is linked to an active cafe report; revise report links first' THEN RAISE;END IF;END;
+ BEGIN UPDATE public.product_stock_movements SET qty=9 WHERE id=930001;RAISE EXCEPTION 'Reported movement changed';
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Reported cafe movement is immutable' THEN RAISE;END IF;END;
+ inp:=jsonb_set(inp,'{expectedReportId}',to_jsonb((result->>'id')::uuid));inp:=jsonb_set(inp,'{shipmentIds}','["930001"]');
+ BEGIN PERFORM public.accounting_cafe_report_service('review',inp,actor);RAISE EXCEPTION 'Cross-cafe source reused';
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Cafe movement identity differs' THEN RAISE;END IF;END;
+ inp:=jsonb_set(inp,'{shipmentIds}','[]');s:=public.accounting_cafe_report_service('review',inp,actor);
+ BEGIN PERFORM public.accounting_cafe_report_service('record',p||jsonb_build_object('input',inp,'fingerprint','stale','operationKey',gen_random_uuid()),actor);RAISE EXCEPTION 'Stale source accepted';
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Source changed' THEN RAISE;END IF;END;
+ before_count:=(SELECT count(*) FROM bunbun_accounting.cafe_reports);
+ BEGIN PERFORM public.accounting_cafe_report_service('record',p||jsonb_build_object('input',inp||'{"receipts":[{"incomeId":"930001","amount":"20"},{"incomeId":"930001","amount":"20"}]}','fingerprint',bunbun_accounting.cafe_report_sources(inp||'{"receipts":[{"incomeId":"930001","amount":"20"},{"incomeId":"930001","amount":"20"}]}')->>'fingerprint','operationKey',gen_random_uuid()),actor);RAISE EXCEPTION 'Duplicate deposit lines accepted';
+ EXCEPTION WHEN unique_violation THEN NULL;END;
+ IF (SELECT count(*) FROM bunbun_accounting.cafe_reports)<>before_count THEN RAISE EXCEPTION 'Late receipt failure left a partial report'; END IF;
+ IF EXISTS(SELECT 1 FROM bunbun_accounting.journals) OR (SELECT count(*) FROM public.incomes)<>1 OR (SELECT count(*) FROM public.product_stock_movements)<>2 THEN RAISE EXCEPTION 'Factual report wrote financial or physical transactions'; END IF;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN
+ BEGIN PERFORM public.accounting_cafe_report_service('inspect','{"month":"2026-11","cafeKey":"PUBLIC_HUB"}','2375b60c-c418-47c2-b157-af80b262fadf');RAISE EXCEPTION 'Browser reached private reports';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+ BEGIN PERFORM * FROM bunbun_accounting.cafe_reports;RAISE EXCEPTION 'Browser read private reports';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+END $$;
+RESET ROLE;
+ROLLBACK;
+SELECT 'PASS: net deposit, effective source fingerprint, immutable revisions and replay, cross-cafe receipt caps, source locks, stale review, atomic failure, browser denial, no journal/stock/cash writes' result;

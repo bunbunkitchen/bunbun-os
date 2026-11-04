@@ -18,6 +18,9 @@ on:
       - 'supabase/functions/accounting-material/**'
       - 'supabase/functions/accounting-production/**'
       - 'supabase/functions/accounting-product-flow/**'
+      - 'supabase/functions/accounting-cafe-report/**'
+      - 'supabase/functions/_shared/accountingCafeReport.js'
+      - 'tests/sql/source-cafe-report-*'
       - '.github/workflows/source-accounting-staging.yml'
   workflow_dispatch:
 permissions:
@@ -69,6 +72,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-material-wip-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-production-cost-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-product-cost-flow-staging.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-cafe-report-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/source-accounting-local-seed.sql
       - name: Test real-source purchasing, corrections and period expenses
         run: |
@@ -79,6 +83,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-material-wip-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-production-cost-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-product-cost-flow-rollback.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-cafe-report-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF EXISTS(SELECT 1 FROM public.expenses) OR EXISTS(SELECT 1 FROM public.purchases) OR EXISTS(SELECT 1 FROM bunbun_accounting.journals) THEN RAISE EXCEPTION 'Test fixtures escaped rollback'; END IF; END \$\$;"
       - name: Test simultaneous material usage in a separate disposable database
         env:
@@ -102,3 +107,10 @@ jobs:
         env:
           BUNBUN_SOURCE_ACCOUNTING_CI: isolated-local
         run: bash tests/sql/source-settlement-race.sh
+
+      - name: Test simultaneous cafe reports sharing one net receipt
+        env:
+          BUNBUN_SOURCE_ACCOUNTING_CI: isolated-local
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -c 'CREATE DATABASE bunbun_cafe_report_ci TEMPLATE bunbun_source_ci'
+          PGDATABASE=bunbun_cafe_report_ci bash tests/sql/source-cafe-report-race.sh
