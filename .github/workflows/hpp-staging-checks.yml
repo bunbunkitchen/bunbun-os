@@ -3,6 +3,9 @@ name: HPP staging validation
 on:
   pull_request:
     paths:
+      - "docs/sql/cloud-cafe-*.sql"
+      - "tests/sql/cloud-cafe-*.sql"
+      - "tests/sql/source-cafe-*"
       - "src/pages/finance/HppAudit.jsx"
       - "src/pages/finance/CutoverPreparation.jsx"
       - "src/services/hppCutoverService.js"

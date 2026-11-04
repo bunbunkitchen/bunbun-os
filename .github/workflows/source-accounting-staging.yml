@@ -77,7 +77,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-cafe-report-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/sql/cloud-cafe-ledger-staging.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/source-accounting-local-seed.sql
-      - name: Test real-source purchasing, corrections and period expenses
+      - name: Test real-source purchasing, expenses, cafe reports and ledger posting
         run: |
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-purchase-posting-rollback.sql
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/cloud-purchase-correction-rollback.sql
