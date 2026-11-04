@@ -149,7 +149,7 @@ export function createOwnerMonthlyReportHandler({
     if (!snapshot) {
       return json({
         ok: false, code: "PERIOD_NOT_READY",
-        message: "Belum tersedia saldo awal approved dan jurnal posted untuk periode ini.",
+        message: "Laporan belum tersedia. Periksa saldo awal, jurnal, dan kelengkapan HPP produk terjual.",
       }, 409, origin);
     }
 

@@ -10,11 +10,12 @@ try {
   await db.exec(await readFile('tests/sql/source-accounting-local-bootstrap.sql','utf8'));
   const files = ['docs/sql/staging-production-baseline.sql','docs/sql/cloud-ledger-core-staging.sql',
     'docs/sql/cloud-purchase-posting-staging.sql','docs/sql/cloud-purchase-correction-staging.sql',
-    'docs/sql/cloud-purchase-service-staging.sql','docs/sql/cloud-period-expense-staging.sql'];
+    'docs/sql/cloud-purchase-service-staging.sql','docs/sql/cloud-period-expense-staging.sql',
+    'docs/sql/cloud-sale-settlement-staging.sql'];
   for (const file of files) { await db.exec(await readFile(file,'utf8')); console.log('Loaded',file); }
   await db.exec(await readFile('tests/sql/source-accounting-local-seed.sql','utf8'));
   const tests = ['tests/sql/cloud-purchase-posting-rollback.sql','tests/sql/cloud-purchase-correction-rollback.sql',
-    'tests/sql/cloud-period-expense-rollback.sql'];
+    'tests/sql/cloud-period-expense-rollback.sql','tests/sql/cloud-sale-settlement-rollback.sql'];
   for (const test of tests) {
     const results = await db.exec(await readFile(test,'utf8'));
     console.log(test, JSON.stringify(results.at(-1).rows));

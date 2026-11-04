@@ -68,6 +68,12 @@ const handler = createOwnerMonthlyReportHandler({
   },
   async loadMonthlyReport(month: string, _verifiedUserId: string) {
     if (!sql) throw new Error("Unconfigured");
+    if (!adminClient) throw new Error("Unconfigured");
+    // Unknown sold cost must not appear as zero COGS / a completed profit.
+    const costs = await adminClient.rpc("accounting_revenue_service", {
+      p_action: "cost_readiness", p_payload: { month }, p_actor_id: _verifiedUserId,
+    });
+    if (costs.error || costs.data?.soldCostsComplete !== true) return null;
     // SQL text constant, month supplied as a parameter: never string-concat
     // a user input into SQL. All underlying views are posted-journal-only.
     const rows = await sql.unsafe(POSTED_FINANCIAL_REPORT_SQL, [month]);
