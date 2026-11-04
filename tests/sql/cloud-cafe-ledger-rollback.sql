@@ -36,6 +36,7 @@ BEGIN
  EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Cafe facts changed or still differ; review and save factual report first' THEN RAISE;END IF;END;
  inp:=base||jsonb_build_object('expectedReportId',hub);src:=public.accounting_cafe_report_service('review',inp,actor);
  result:=public.accounting_cafe_report_service('record',jsonb_build_object('input',inp,'fingerprint',src->>'fingerprint','operationKey',gen_random_uuid(),'summary','{"factsMatch":true,"readyToClose":false,"accountingStatus":"REQUIRES_LEDGER_RECONCILIATION","status":"FACTS_RECONCILED"}'::jsonb),actor);hub:=(result->>'id')::uuid;
+ IF bunbun_accounting.cafe_ledger_month_ready('2026-11-01') THEN RAISE EXCEPTION 'Unimported cafe reports marked complete'; END IF;
  p:=p||jsonb_build_object('reportId',hub);src:=public.accounting_cafe_ledger_service('review_import',p,actor);
  q:=p||jsonb_build_object('sourceSnapshot',src->>'sourceSnapshot','operationKey',gen_random_uuid());
  BEGIN PERFORM public.accounting_cafe_ledger_service('post_import',q||'{"sourceSnapshot":"stale"}',actor);RAISE EXCEPTION 'Stale ledger snapshot accepted';
@@ -91,6 +92,16 @@ BEGIN
  OR EXISTS(SELECT 1 FROM bunbun_accounting.sale_postings WHERE cogs_status<>'PENDING_VALUATION') THEN RAISE EXCEPTION 'Net revenue/receipt or physical/source count/COGS boundary wrong'; END IF;
  BEGIN UPDATE bunbun_accounting.periods SET status='CLOSED' WHERE month_start='2026-11-01';RAISE EXCEPTION 'Pending actual COGS closed';
  EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Actual sold COGS is incomplete; accounting period cannot close' THEN RAISE;END IF;END;
+ -- Even a zero-revenue report cannot hide confirmed cafe waste at close.
+ BEGIN
+  inp:=base||'{"month":"2027-01","asOfDate":"2027-01-31","receipts":[],"rows":[{"productId":"940001","openingQty":"1","receivedQty":"0","regularQty":"0","bundleQty":"0","discountQty":"0","wasteQty":"1","returnedQty":"0","closingQty":"0","regularNet":"0","bundleNet":"0","discountNet":"0"}]}'::jsonb;
+  src:=public.accounting_cafe_report_service('review',inp,actor);
+  PERFORM public.accounting_cafe_report_service('record',jsonb_build_object('input',inp,'fingerprint',src->>'fingerprint','operationKey',gen_random_uuid(),'summary','{"factsMatch":true,"readyToClose":false,"accountingStatus":"REQUIRES_LEDGER_RECONCILIATION"}'::jsonb),actor);
+  IF bunbun_accounting.cafe_ledger_month_ready('2027-01-01') THEN RAISE EXCEPTION 'Cafe waste ignored when report has no revenue'; END IF;
+  RAISE EXCEPTION 'ROLLBACK_CAFE_WASTE_FIXTURE';
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'ROLLBACK_CAFE_WASTE_FIXTURE' THEN RAISE;END IF;
+ END;
+ IF NOT bunbun_accounting.cafe_ledger_month_ready('2026-11-01') THEN RAISE EXCEPTION 'Posted cafe revenue and receipts did not reconcile'; END IF;
  -- Imported invoice feeds the same actual lot-COGS path, without another stock-out.
  FOR n IN 1..2 LOOP
   p:=jsonb_build_object('kind','SALE','saleId',CASE WHEN n=1 THEN hub_sale::text ELSE coffee_sale::text END,'date','2026-11-30','cafeKey',CASE WHEN n=1 THEN 'PUBLIC_HUB' ELSE 'PUBLIC_COFFEE' END,

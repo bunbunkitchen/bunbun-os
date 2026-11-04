@@ -194,4 +194,37 @@ BEGIN
 END $fn$;
 REVOKE ALL ON FUNCTION public.accounting_cafe_ledger_service(text,jsonb,uuid) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.accounting_cafe_ledger_service(text,jsonb,uuid) TO service_role;
+-- Financial close cannot ignore factual cafe waste, unimported sales or receipt gaps.
+CREATE FUNCTION bunbun_accounting.cafe_ledger_month_ready(p_month date) RETURNS boolean
+LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $fn$
+DECLARE r bunbun_accounting.cafe_reports%rowtype; l record; net numeric; paid numeric; start_month date;
+BEGIN
+ SELECT date_trunc('month',min(posting_date))::date INTO start_month FROM bunbun_accounting.journals WHERE source_type='OPENING' AND status='POSTED';
+ FOR r IN SELECT x.* FROM bunbun_accounting.current_cafe_reports c JOIN bunbun_accounting.cafe_reports x ON x.id=c.report_id
+  WHERE c.month<=p_month AND c.month>=coalesce(start_month,'-infinity'::date) LOOP
+  IF r.summary->>'factsMatch' IS DISTINCT FROM 'true' OR (r.input->>'confirmedCredit')::numeric<>0
+   OR EXISTS(SELECT 1 FROM jsonb_array_elements(r.input->'rows') x WHERE (x->>'wasteQty')::numeric>0) THEN RETURN false; END IF;
+  SELECT coalesce(sum((x->>'regularNet')::numeric+(x->>'bundleNet')::numeric+(x->>'discountNet')::numeric),0) INTO net FROM jsonb_array_elements(r.input->'rows') x;
+  IF net>0 AND NOT EXISTS(SELECT 1 FROM bunbun_accounting.cafe_ledger_imports WHERE report_id=r.id) THEN RETURN false; END IF;
+  FOR l IN SELECT * FROM bunbun_accounting.cafe_report_receipts WHERE report_id=r.id LOOP
+   IF NOT EXISTS(SELECT 1 FROM bunbun_accounting.income_postings WHERE income_id=l.income_id)
+    OR coalesce((SELECT sum(a.amount) FROM bunbun_accounting.settlement_allocations a JOIN bunbun_accounting.cafe_ledger_sales z ON z.sale_id=a.sale_id WHERE z.report_id=r.id AND a.income_id=l.income_id),0)<>l.amount THEN RETURN false; END IF;
+  END LOOP;
+  SELECT coalesce(sum(a.amount),0) INTO paid FROM bunbun_accounting.settlement_allocations a JOIN bunbun_accounting.cafe_ledger_sales z ON z.sale_id=a.sale_id JOIN public.incomes i ON i.id=a.income_id
+   WHERE z.report_id=r.id AND i.tanggal<=(r.input->>'asOfDate')::date;
+  IF net-paid<>(r.input->>'confirmedUnpaid')::numeric THEN RETURN false; END IF;
+ END LOOP;
+ RETURN true;
+END $fn$;
+REVOKE ALL ON FUNCTION bunbun_accounting.cafe_ledger_month_ready(date) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION bunbun_accounting.cafe_ledger_month_ready(date) TO service_role;
+CREATE FUNCTION bunbun_accounting.guard_cafe_ledger_close() RETURNS trigger
+LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $fn$
+BEGIN
+ IF NEW.status='CLOSED' AND OLD.status='OPEN' AND NOT bunbun_accounting.cafe_ledger_month_ready(NEW.month_start)
+ THEN RAISE EXCEPTION 'Cafe reports, net receipts, waste or advances require reconciliation before close'; END IF;
+ RETURN NEW;
+END $fn$;
+REVOKE ALL ON FUNCTION bunbun_accounting.guard_cafe_ledger_close() FROM PUBLIC,anon,authenticated,service_role;
+CREATE TRIGGER zz_guard_cafe_ledger_close BEFORE UPDATE ON bunbun_accounting.periods FOR EACH ROW EXECUTE FUNCTION bunbun_accounting.guard_cafe_ledger_close();
 COMMIT;

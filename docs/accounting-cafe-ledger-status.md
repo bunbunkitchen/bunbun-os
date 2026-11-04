@@ -20,7 +20,7 @@ Private RLS tables, no anon/authenticated grants; public transport SECURITY INVO
 
 - Deposits earlier than a consolidated month-end invoice require advance accounting. Review blocks rather than redating receipts or recognizing a whole month's sales too early. Overpayments and free promotional goods also require their explicit accounting classification first.
 - Cafe waste journals, advance receipt/application, sold refunds/reversals and downstream financial corrections remain separate work. Facts may include waste, but this revenue bridge never converts money differences into waste or pretends waste costs are posted.
-- This does not activate the final monthly financial endpoint or assert complete business readiness. API keeps `actualProfitAvailable:false` and factual reports keep `readyToClose:false`. Known actual lot HPP must still be posted through the existing cost flow, and historical opening evidence remains unresolved.
+- The new close gate rejects recorded reports with unimported positive revenue, unposted/mismatched deposit allocations, unresolved unpaid balances, any cafe waste, or overpayment. Existing actual-COGS guards remain. This does not activate the final monthly financial endpoint or assert complete business readiness. API keeps `actualProfitAvailable:false` and factual reports keep `readyToClose:false`. Known actual lot HPP must still be posted through the existing cost flow, and historical opening evidence remains unresolved.
 - Inserting a public sales row here is an actual-sold invoice from approved report evidence; it is not another cafe shipment. Raw report persistence alone still makes no financial posting.
 - Authenticated Owner browser acceptance is not established by SQL/CI tests. Preview is behind Vercel authentication.
 
