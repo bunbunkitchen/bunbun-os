@@ -157,8 +157,8 @@ BEGIN
  op:=(p_payload->>'operationKey')::uuid;
  IF p_action='post_import' THEN
   IF p_payload->>'mode'='CREATE' THEN
-   INSERT INTO public.sales(sale_date,sales_channel,total_amount,created_by)
-   VALUES((p_payload->>'saleDate')::date,r.cafe_key,total,p_actor_id) RETURNING id INTO v_sale_id;
+   INSERT INTO public.sales(sale_date,sales_channel,total_amount,created_by,operation_key,notes)
+   VALUES((p_payload->>'saleDate')::date,r.cafe_key,total,p_actor_id,op,'Laporan penjualan kafe '||to_char(r.month,'YYYY-MM')||' · '||CASE WHEN r.cafe_key='PUBLIC_HUB' THEN 'Public Hub' ELSE 'The Public Coffee' END) RETURNING id INTO v_sale_id;
    -- Exact-cent unit pricing, never round q * unit_price away from reported net.
    FOR row_item IN SELECT x FROM jsonb_array_elements(r.input->'rows') x LOOP
     FOREACH category IN ARRAY ARRAY['regular','bundle','discount'] LOOP

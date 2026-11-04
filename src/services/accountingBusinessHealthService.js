@@ -70,8 +70,8 @@ export async function loadOwnerFinancialDashboard(months) {
   return readFinancialDashboardMonths({
     months,
     config: {
-      mode: import.meta.env.VITE_BUNBUN_ACCOUNTING_MODE,
-      projectRef: import.meta.env.VITE_BUNBUN_ACCOUNTING_STAGING_REF,
+      mode: import.meta.env.VITE_BUNBUN_ACCOUNTING_MODE || (import.meta.env.VITE_SUPABASE_URL === 'https://pkgrqalpazhwdcxmthvb.supabase.co' ? 'isolated-staging' : ''),
+      projectRef: import.meta.env.VITE_BUNBUN_ACCOUNTING_STAGING_REF || (import.meta.env.VITE_SUPABASE_URL === 'https://pkgrqalpazhwdcxmthvb.supabase.co' ? 'pkgrqalpazhwdcxmthvb' : ''),
       supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
       origin: typeof window === "undefined" ? "" : window.location.origin,
     },

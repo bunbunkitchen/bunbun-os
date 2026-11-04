@@ -3,6 +3,8 @@ name: Accounting ledger — isolated PostgreSQL
 on:
   pull_request:
     paths:
+      - "docs/sql/cloud-owner-financial-report-staging.sql"
+      - "tests/sql/cloud-owner-financial-report-rollback.sql"
       - "docs/sql/cloud-cafe-*.sql"
       - "tests/sql/cloud-cafe-*.sql"
       - "docs/sql/accounting-schema-review.sql"

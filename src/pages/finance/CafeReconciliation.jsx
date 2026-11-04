@@ -1,4 +1,6 @@
 import {useState} from 'react';
+import CafeExceptionPanel from '../../components/accounting/CafeExceptionPanel';
+import {requestCafeException} from '../../services/accountingCafeExceptionService';
 import CafeLedgerPanel from '../../components/accounting/CafeLedgerPanel';
 import {requestCafeLedger} from '../../services/accountingCafeLedgerService';
 import {requestCafeReport} from '../../services/accountingCafeReportService';
@@ -10,14 +12,16 @@ const box='border rounded-lg px-3 py-2 w-full bg-white';
 const button='rounded-lg bg-[#595e47] text-white px-4 py-2 disabled:opacity-50';
 export default function CafeReconciliation(){
  const [month,setMonth]=useState(()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit'}).format(new Date()).replace(/^(\d{2})\/(\d{4})$/,'$2-$1'));
- const [cafe,setCafe]=useState('PUBLIC_HUB'),[loaded,setLoaded]=useState(null),[input,setInput]=useState(null),[review,setReview]=useState(null),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[ledger,setLedger]=useState(null);
+ const [cafe,setCafe]=useState('PUBLIC_HUB'),[loaded,setLoaded]=useState(null),[input,setInput]=useState(null),[review,setReview]=useState(null),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[ledger,setLedger]=useState(null),[exceptions,setExceptions]=useState(null);
  const change=patch=>{setInput(x=>({...x,...patch}));setReview(null);setMessage('');};
  const run=async fn=>{setBusy(true);setMessage('');try{await fn();}catch(e){setMessage(e.message);}finally{setBusy(false);}};
  const load=async()=>{
   const data=await requestCafeReport({action:'inspect',month,cafeKey:cafe});setLoaded(data);setReview(null);
   const saved=data.currentReport;
-  setLedger(null);
-  if(saved){try{setLedger(await requestCafeLedger({action:'inspect',reportId:saved.id}));}catch{setMessage('Laporan dimuat, tetapi pemeriksaan jurnal belum tersedia. Muat ulang sebelum mengubah laporan.');}}
+  setLedger(null);setExceptions(null);
+  if(saved){const results=await Promise.allSettled([requestCafeLedger({action:'inspect',reportId:saved.id}),requestCafeException({action:'inspect',reportId:saved.id})]);
+   if(results[0].status==='fulfilled')setLedger(results[0].value);if(results[1].status==='fulfilled')setExceptions(results[1].value);
+   if(results.some(x=>x.status==='rejected'))setMessage('Laporan dimuat, tetapi pemeriksaan jurnal belum lengkap. Muat ulang sebelum mengubah laporan.');}
   setInput(saved?{...saved.input,expectedReportId:saved.id,factsConfirmed:false}:{month,cafeKey:cafe,asOfDate:new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5)),0)).toISOString().slice(0,10),expectedReportId:null,openingEvidenceRef:'',evidenceRef:'',factsConfirmed:false,confirmedUnpaid:'',confirmedCredit:'',shipmentIds:[],returnIds:[],receipts:[],rows:[blank()]});
  };
  const choose=(key,id,checked)=>change({[key]:checked?[...input[key],id]:input[key].filter(x=>x!==id)});
@@ -32,8 +36,9 @@ export default function CafeReconciliation(){
   {loaded&&input&&<>
    {loaded.sourceChanged&&<p className="p-4 bg-amber-50 rounded-lg">Sumber atau laporan bulan sebelumnya sudah berubah sejak laporan ini disimpan. Periksa ulang sebelum memakai hasil pencocokan.</p>}
    {loaded.currentReport&&<CafeLedgerPanel key={loaded.currentReport.id} report={loaded.currentReport} initialStatus={ledger} onComplete={load} />}
-   {ledger?.imported&&<p className="p-4 bg-amber-50 rounded-lg">Laporan sudah menjadi sumber jurnal. Perubahan memerlukan koreksi akuntansi.</p>}
-   <fieldset disabled={busy||!!ledger?.imported||!!(loaded.currentReport&&!ledger)} className="space-y-6">
+   {loaded.currentReport&&<CafeExceptionPanel key={loaded.currentReport.id} report={loaded.currentReport} status={exceptions} products={loaded.products} onComplete={load} />}
+   {(ledger?.imported||exceptions?.waste.some(w=>w.posted))&&<p className="p-4 bg-amber-50 rounded-lg">Laporan sudah menjadi sumber jurnal. Perubahan memerlukan koreksi akuntansi.</p>}
+   <fieldset disabled={busy||!!ledger?.imported||!!exceptions?.waste.some(w=>w.posted)||!!(loaded.currentReport&&(!ledger||!exceptions))} className="space-y-6">
    <section className="bg-white rounded-xl p-5 space-y-4"><h2 className="font-bold text-xl">Laporan dari kafe {loaded.currentReport?`· revisi ${loaded.currentReport.revision}`:''}</h2>
     <div className="grid md:grid-cols-2 gap-4"><label>Bukti laporan kafe<input className={box} value={input.evidenceRef} onChange={e=>change({evidenceRef:e.target.value})} placeholder="Nomor laporan atau referensi dokumen" /></label><label>Bukti stok awal<input className={box} value={input.openingEvidenceRef} onChange={e=>change({openingEvidenceRef:e.target.value})} placeholder="Laporan bulan lalu / hasil hitung stok" /></label></div>
     <p>Semua kolom wajib diisi. Angka 0 berarti sudah dipastikan nol; kolom kosong berarti belum diketahui.</p>

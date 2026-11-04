@@ -3,6 +3,8 @@ name: HPP staging validation
 on:
   pull_request:
     paths:
+      - "docs/sql/cloud-owner-financial-report-staging.sql"
+      - "tests/sql/cloud-owner-financial-report-rollback.sql"
       - "docs/sql/cloud-cafe-*.sql"
       - "tests/sql/cloud-cafe-*.sql"
       - "tests/sql/source-cafe-*"
@@ -93,13 +95,25 @@ jobs:
       - name: HPP unit tests
         run: node --test tests/hpp*.test.js
       - name: HPP lint
-        run: npx eslint src/components/accounting/CafeLedgerPanel.jsx src/services/accountingCafeLedgerService.js supabase/functions/_shared/accountingCafeLedgerReview.js src/pages/finance/CafeReconciliation.jsx src/services/accountingCafeReportService.js supabase/functions/_shared/accountingCafeReport.js supabase/functions/_shared/accountingCafeReportReview.js src/components/accounting/ProductCostFlowPanel.jsx src/services/accountingProductFlowService.js supabase/functions/_shared/accountingProductFlowReview.js src/utils/hppBatchAssessment.js src/utils/hppCostReview.js src/utils/hppMonthlyAllocation.js src/utils/hppHistoricalValuation.js src/utils/hppCutoverOpening.js src/utils/accountingOpeningJournal.js src/utils/accountingPostedReports.js src/utils/accountingEventProposals.js src/utils/accountingSourceReadiness.js src/services/accountingSourceReadinessService.js src/pages/finance/AccountingSourceReadiness.jsx src/pages/finance/OwnerBusinessHealth.jsx src/components/accounting/FinancialTrendChart.jsx src/utils/accountingBusinessHealth.js src/utils/accountingVerifiedSourceBridge.js src/utils/accountingLotValuation.js src/utils/accountingSaleStockReconciliation.js src/utils/accountingSaleLotAllocation.js src/utils/accountingNewLotReleasePlan.js src/utils/accountingLotReleaseTransport.js src/utils/accountingStockWriterReadiness.js src/services/accountingSaleStockAuditService.js src/pages/finance/SaleLotTraceAudit.jsx src/utils/accountingBatchLotAudit.js src/services/accountingBatchLotReadService.js src/services/accountingBusinessHealthService.js supabase/functions/_shared/accountingOwnerReadiness.js supabase/functions/_shared/accountingStagingGuard.js supabase/functions/_shared/accountingOwnerMonthlyReport.js supabase/functions/_shared/accountingPrivateLedgerRead.js supabase/functions/_shared/accountingOwnerSourcePreview.js src/components/hpp/OpeningJournalPreview.jsx src/services/hppCutoverService.js src/pages/finance/CutoverPreparation.jsx src/services/hppHistoricalValuationService.js src/components/hpp/HistoricalInventoryAudit.jsx src/services/batchCostingReadService.js src/services/hppAuditService.js src/pages/finance/HppAudit.jsx src/routes/AppRoutes.jsx src/components/layout/Sidebar.jsx
+        run: npx eslint src/components/accounting/CafeExceptionPanel.jsx src/services/accountingCafeExceptionService.js supabase/functions/_shared/accountingCafeExceptionReview.js src/components/accounting/CafeLedgerPanel.jsx src/services/accountingCafeLedgerService.js supabase/functions/_shared/accountingCafeLedgerReview.js src/pages/finance/CafeReconciliation.jsx src/services/accountingCafeReportService.js supabase/functions/_shared/accountingCafeReport.js supabase/functions/_shared/accountingCafeReportReview.js src/components/accounting/ProductCostFlowPanel.jsx src/services/accountingProductFlowService.js supabase/functions/_shared/accountingProductFlowReview.js src/utils/hppBatchAssessment.js src/utils/hppCostReview.js src/utils/hppMonthlyAllocation.js src/utils/hppHistoricalValuation.js src/utils/hppCutoverOpening.js src/utils/accountingOpeningJournal.js src/utils/accountingPostedReports.js src/utils/accountingEventProposals.js src/utils/accountingSourceReadiness.js src/services/accountingSourceReadinessService.js src/pages/finance/AccountingSourceReadiness.jsx src/pages/finance/OwnerBusinessHealth.jsx src/components/accounting/FinancialTrendChart.jsx src/utils/accountingBusinessHealth.js src/utils/accountingVerifiedSourceBridge.js src/utils/accountingLotValuation.js src/utils/accountingSaleStockReconciliation.js src/utils/accountingSaleLotAllocation.js src/utils/accountingNewLotReleasePlan.js src/utils/accountingLotReleaseTransport.js src/utils/accountingStockWriterReadiness.js src/services/accountingSaleStockAuditService.js src/pages/finance/SaleLotTraceAudit.jsx src/utils/accountingBatchLotAudit.js src/services/accountingBatchLotReadService.js src/services/accountingBusinessHealthService.js supabase/functions/_shared/accountingOwnerReadiness.js supabase/functions/_shared/accountingStagingGuard.js supabase/functions/_shared/accountingOwnerMonthlyReport.js supabase/functions/_shared/accountingPrivateLedgerRead.js supabase/functions/_shared/accountingOwnerSourcePreview.js src/components/hpp/OpeningJournalPreview.jsx src/services/hppCutoverService.js src/pages/finance/CutoverPreparation.jsx src/services/hppHistoricalValuationService.js src/components/hpp/HistoricalInventoryAudit.jsx src/services/batchCostingReadService.js src/services/hppAuditService.js src/pages/finance/HppAudit.jsx src/routes/AppRoutes.jsx src/components/layout/Sidebar.jsx
       - name: Verify protected staging Auth script syntax
         run: |
           node --check scripts/staging/stagingTarget.mjs
           node --check scripts/staging/owner-auth-smoke.mjs
       - name: Production build
         run: npm run build
+      - name: Build actual staging finance branches without credentials
+        env:
+          VITE_SUPABASE_URL: https://pkgrqalpazhwdcxmthvb.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_synthetic_ci_build_only
+        run: |
+          npx vite build --outDir dist-staging --emptyOutDir
+          node --input-type=module <<'JS'
+          import {readdirSync,readFileSync} from 'node:fs';
+          const js=readdirSync('dist-staging/assets').filter(x=>x.startsWith('index-')&&x.endsWith('.js')).map(x=>readFileSync('dist-staging/assets/'+x,'utf8')).join('');
+          for(const marker of ['accounting-cafe-exceptions','Penerimaan uang muka','Waste produk di kafe','accounting-owner-monthly-report'])if(!js.includes(marker))throw Error('Staging finance branch absent: '+marker);
+          console.log('PASS: staging advance, waste and posted-report UI are included; synthetic build key only');
+          JS
 
   accounting-postgres:
     strategy:
@@ -374,4 +388,4 @@ jobs:
         with:
           deno-version: v2.x
       - name: Typecheck staging-only Edge Function
-        run: deno check supabase/functions/accounting-cafe-ledger/index.ts supabase/functions/accounting-cafe-report/index.ts supabase/functions/accounting-product-flow/index.ts supabase/functions/accounting-production/index.ts supabase/functions/accounting-material/index.ts supabase/functions/accounting-revenue/index.ts supabase/functions/accounting-expense/index.ts supabase/functions/accounting-purchase/index.ts supabase/functions/accounting-owner-readiness/index.ts supabase/functions/accounting-owner-monthly-report/index.ts supabase/functions/accounting-owner-source-preview/index.ts
+        run: deno check supabase/functions/accounting-cafe-exceptions/index.ts supabase/functions/accounting-cafe-ledger/index.ts supabase/functions/accounting-cafe-report/index.ts supabase/functions/accounting-product-flow/index.ts supabase/functions/accounting-production/index.ts supabase/functions/accounting-material/index.ts supabase/functions/accounting-revenue/index.ts supabase/functions/accounting-expense/index.ts supabase/functions/accounting-purchase/index.ts supabase/functions/accounting-owner-readiness/index.ts supabase/functions/accounting-owner-monthly-report/index.ts supabase/functions/accounting-owner-source-preview/index.ts
