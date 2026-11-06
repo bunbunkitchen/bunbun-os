@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import OpeningJournalReport from "../../components/reports/OpeningJournalReport";
 import PageTitle from "../../components/ui/PageTitle";
 import Card from "../../components/ui/Card";
 import Currency from "../../components/ui/Currency";
@@ -290,6 +291,8 @@ export default function Reports() {
             : "Tampilkan laporan berdasarkan jenis dan periode tanggal"
         }
       />
+
+      {role === "owner" && <OpeningJournalReport />}
 
       {pageError && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
