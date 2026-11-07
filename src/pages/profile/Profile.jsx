@@ -11,9 +11,11 @@ import { useAuth } from "../../context/AuthContext";
 
 function getRoleLabel(role) {
   const labels = {
+    admin: "Admin",
     owner: "Owner",
     baker: "Baker",
     helper: "Helper",
+    cashier: "Cashier",
   };
 
   return labels[role] ?? "User";

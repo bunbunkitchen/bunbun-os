@@ -54,25 +54,24 @@ const BAKER_REPORT_TYPES = [
 
 export default function Reports() {
   const { role } = useAuth();
+  const isOwner = role === "owner";
   const isBaker = role === "baker";
 
   const defaultRange = getCurrentMonthRange();
   const [startDate, setStartDate] = useState(defaultRange.startDate);
   const [endDate, setEndDate] = useState(defaultRange.endDate);
   const [reportType, setReportType] = useState(isBaker ? "purchase" : "expense");
-  const [report, setReport] = useState(null);
+  const [reportState, setReportState] = useState(null);
+  const report = reportState?.role === role ? reportState.data : null;
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState("");
 
-  const availableReportTypes = isBaker
-    ? REPORT_TYPES.filter((item) => BAKER_REPORT_TYPES.includes(item.value))
-    : REPORT_TYPES;
-
-  useEffect(() => {
-    if (!availableReportTypes.some((item) => item.value === reportType)) {
-      setReportType(isBaker ? "purchase" : "expense");
-    }
-  }, [isBaker, reportType]);
+  const availableReportTypes = isOwner
+    ? REPORT_TYPES
+    : REPORT_TYPES.filter((item) => BAKER_REPORT_TYPES.includes(item.value));
+  const effectiveReportType = availableReportTypes.some((item) => item.value === reportType)
+    ? reportType
+    : "purchase";
 
   async function loadReport() {
     if (!startDate || !endDate) {
@@ -88,7 +87,9 @@ export default function Reports() {
     try {
       setLoading(true);
       setPageError("");
-      setReport(await getFinancialReport({ startDate, endDate }));
+      setReportState(null);
+      const nextReport = await getFinancialReport({ startDate, endDate, role });
+      setReportState({ data: nextReport, role });
     } catch (error) {
       console.error("Gagal memuat laporan:", error);
       setPageError(error.message || "Laporan gagal dimuat.");
@@ -98,9 +99,10 @@ export default function Reports() {
   }
 
   useEffect(() => {
-    loadReport();
+    void Promise.resolve().then(loadReport);
+    // Role changes must reload and clear the previous role's report data.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [role]);
 
   function handleExport(kind) {
     if (!report) {
@@ -111,9 +113,9 @@ export default function Reports() {
     try {
       setPageError("");
       if (kind === "excel") {
-        exportReportToExcel(report, reportType, role);
+        exportReportToExcel(report, effectiveReportType, role);
       } else {
-        exportReportToPdf(report, reportType, role);
+        exportReportToPdf(report, effectiveReportType, role);
       }
     } catch (error) {
       console.error(`Gagal export ${kind}:`, error);
@@ -122,7 +124,12 @@ export default function Reports() {
   }
 
   const selectedLabel =
-    availableReportTypes.find((item) => item.value === reportType)?.label || "Laporan";
+    availableReportTypes.find((item) => item.value === effectiveReportType)?.label || "Laporan";
+  const reportMatchesFilters = Boolean(
+    report &&
+      report.period.startDate === startDate &&
+      report.period.endDate === endDate
+  );
 
   const purchaseColumns = [
     {
@@ -250,36 +257,36 @@ export default function Reports() {
   let showTotal = false;
 
   if (report) {
-    if (reportType === "income" && !isBaker) {
+    if (effectiveReportType === "income" && isOwner) {
       table = <DataTable columns={incomeColumns} data={report.incomes} emptyMessage="Tidak ada pemasukan pada periode ini" />;
       totalLabel = "Total Pemasukan";
       totalValue = report.summary.totalIncome;
       showTotal = true;
-    } else if (reportType === "expense" && !isBaker) {
+    } else if (effectiveReportType === "expense" && isOwner) {
       table = <DataTable columns={expenseColumns} data={report.expenses} emptyMessage="Tidak ada pengeluaran pada periode ini" />;
       totalLabel = "Total Pengeluaran";
       totalValue = report.summary.totalExpense;
       showTotal = true;
-    } else if (reportType === "purchase") {
+    } else if (effectiveReportType === "purchase") {
       table = <DataTable columns={purchaseColumns} data={report.purchases} emptyMessage="Tidak ada purchasing pada periode ini" />;
-    } else if (reportType === "sales" && !isBaker) {
+    } else if (effectiveReportType === "sales" && isOwner) {
       table = <DataTable columns={salesColumns} data={report.sales} emptyMessage="Tidak ada penjualan pada periode ini" />;
       totalLabel = "Total Penjualan";
       totalValue = report.summary.totalSales;
       showTotal = true;
-    } else if (reportType === "stock") {
+    } else if (effectiveReportType === "stock") {
       table = <DataTable columns={stockColumns} data={report.stock} emptyMessage="Tidak ada pergerakan stok pada periode ini" />;
-    } else if (reportType === "product_out") {
+    } else if (effectiveReportType === "product_out") {
       table = <DataTable columns={productOutColumns} data={report.productOut} emptyMessage="Tidak ada produk keluar pada periode ini" />;
       totalLabel = "Total Produk Keluar";
       totalValue = report.summary.totalProductOut;
       showTotal = true;
-    } else if (reportType === "production") {
+    } else if (effectiveReportType === "production") {
       table = <DataTable columns={productionColumns} data={report.batches} emptyMessage="Tidak ada produksi pada periode ini" />;
     }
   }
 
-  const isCurrencyTotal = ["income", "expense", "sales"].includes(reportType);
+  const isCurrencyTotal = ["income", "expense", "sales"].includes(effectiveReportType);
 
   return (
     <div>
@@ -307,7 +314,7 @@ export default function Reports() {
               Jenis Laporan
             </label>
             <select
-              value={reportType}
+              value={effectiveReportType}
               onChange={(event) => setReportType(event.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-amber-600"
             >
@@ -357,14 +364,44 @@ export default function Reports() {
             <div>
               <h2 className="text-xl font-bold text-gray-900">{selectedLabel}</h2>
               <p className="text-sm text-gray-500">
-                Periode {formatDate(startDate)} — {formatDate(endDate)}
+                Periode {formatDate(report.period.startDate)} — {formatDate(report.period.endDate)}
               </p>
             </div>
             <div className="flex gap-3">
-              <Button onClick={() => handleExport("excel")}>Export Excel</Button>
-              <Button onClick={() => handleExport("pdf")}>Export PDF</Button>
+              <Button onClick={() => handleExport("excel")} disabled={loading || !reportMatchesFilters}>Export Excel</Button>
+              <Button onClick={() => handleExport("pdf")} disabled={loading || !reportMatchesFilters}>Export PDF</Button>
             </div>
           </div>
+          {!reportMatchesFilters && (
+            <p className="mt-2 text-sm text-amber-700">
+              Periode berubah. Tampilkan laporan lagi sebelum mengekspor.
+            </p>
+          )}
+
+          {isOwner && (
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <Card>
+                <p className="text-sm text-gray-500">Pemasukan Bersih Bunbun</p>
+                <p className="mt-2 text-2xl font-bold text-gray-900">
+                  <Currency value={report.summary.totalIncome} />
+                </p>
+                <p className="mt-1 text-xs text-gray-500">Berdasarkan setoran yang dicatat</p>
+              </Card>
+              <Card>
+                <p className="text-sm text-gray-500">Pengeluaran</p>
+                <p className="mt-2 text-2xl font-bold text-gray-900">
+                  <Currency value={report.summary.totalExpense} />
+                </p>
+              </Card>
+              <Card>
+                <p className="text-sm text-gray-500">Selisih Pemasukan − Pengeluaran</p>
+                <p className="mt-2 text-2xl font-bold text-gray-900">
+                  <Currency value={report.summary.netProfit} />
+                </p>
+                <p className="mt-1 text-xs text-gray-500">Belum memperhitungkan HPP aktual</p>
+              </Card>
+            </div>
+          )}
 
           {showTotal && (
             <Card className="mt-6">
@@ -379,7 +416,7 @@ export default function Reports() {
             </Card>
           )}
 
-          {reportType === "purchase" && (
+          {effectiveReportType === "purchase" && (
             <Card className="mt-6">
               <p className="text-sm text-gray-500">Rekap Pembelian</p>
               <p className="mt-2 text-sm text-gray-700">
@@ -390,7 +427,7 @@ export default function Reports() {
             </Card>
           )}
 
-          {reportType === "stock" && (
+          {effectiveReportType === "stock" && (
             <Card className="mt-6">
               <p className="text-sm text-gray-500">Jumlah Pergerakan Stok</p>
               <p className="mt-2 text-2xl font-bold text-gray-900">
@@ -399,7 +436,7 @@ export default function Reports() {
             </Card>
           )}
 
-          {reportType === "production" && (
+          {effectiveReportType === "production" && (
             <Card className="mt-6">
               <p className="text-sm text-gray-500">Ringkasan Produksi</p>
               <p className="mt-2 text-sm text-gray-700">

@@ -1,0 +1,391 @@
+name: HPP staging validation
+
+on:
+  pull_request:
+    paths:
+      - "docs/sql/cloud-owner-financial-report-staging.sql"
+      - "tests/sql/cloud-owner-financial-report-rollback.sql"
+      - "docs/sql/cloud-cafe-*.sql"
+      - "tests/sql/cloud-cafe-*.sql"
+      - "tests/sql/source-cafe-*"
+      - "src/pages/finance/HppAudit.jsx"
+      - "src/pages/finance/CutoverPreparation.jsx"
+      - "src/services/hppCutoverService.js"
+      - "src/components/hpp/**"
+      - "src/services/batchCostingReadService.js"
+      - "src/services/hppAuditService.js"
+      - "src/services/hppHistoricalValuationService.js"
+      - "src/utils/hpp*.js"
+      - "src/utils/accountingOpeningJournal.js"
+      - "src/utils/accountingPostedReports.js"
+      - "src/utils/accountingEventProposals.js"
+      - "src/utils/accountingSourceReadiness.js"
+      - "src/services/accountingSourceReadinessService.js"
+      - "src/pages/finance/AccountingSourceReadiness.jsx"
+      - "src/pages/finance/OwnerBusinessHealth.jsx"
+      - "src/components/accounting/**"
+      - "src/utils/accountingBusinessHealth.js"
+      - "src/utils/accountingVerifiedSourceBridge.js"
+      - "src/utils/accountingLotValuation.js"
+      - "src/utils/accountingSaleStockReconciliation.js"
+      - "src/utils/accountingSaleLotAllocation.js"
+      - "src/utils/accountingNewLotReleasePlan.js"
+      - "src/utils/accountingLotReleaseTransport.js"
+      - "src/utils/accountingStockWriterReadiness.js"
+      - "docs/sql/accounting-lot-release-staging.sql"
+      - "docs/sql/accounting-lot-writer-gate-staging.sql"
+      - "docs/sql/accounting-frozen-baking-staging.sql"
+      - "docs/sql/accounting-shaping-batch-staging.sql"
+      - "docs/sql/accounting-sales-lot-staging.sql"
+      - "docs/sql/accounting-sales-create-staging.sql"
+      - "docs/sql/accounting-sales-cancel-staging.sql"
+      - "docs/sql/accounting-sales-edit-staging.sql"
+      - "docs/sql/accounting-single-cafe-lot-staging.sql"
+      - "docs/sql/accounting-product-adjustment-staging.sql"
+      - "docs/sql/accounting-product-adjustment-operations-staging.sql"
+      - "docs/sql/accounting-unified-stock-gate-staging.sql"
+      - "docs/sql/accounting-unified-position-protection-staging.sql"
+      - "docs/sql/accounting-production-staging-preflight-readonly.sql"
+      - "docs/accounting-staging-implementation-runbook.md"
+      - "docs/templates/accounting-*.csv"
+      - "scripts/staging/**"
+      - "src/services/accountingSaleStockAuditService.js"
+      - "src/pages/finance/SaleLotTraceAudit.jsx"
+      - "src/utils/accountingBatchLotAudit.js"
+      - "src/services/accountingBatchLotReadService.js"
+      - "src/services/accountingBusinessHealthService.js"
+      - "supabase/functions/accounting-*/**"
+      - "supabase/functions/_shared/accounting*Review.js"
+      - "tests/accounting*Review.test.js"
+      - "supabase/functions/accounting-owner-readiness/**"
+      - "supabase/functions/accounting-owner-monthly-report/**"
+      - "supabase/functions/accounting-owner-source-preview/**"
+      - "supabase/functions/_shared/accountingOwnerReadiness.js"
+      - "supabase/functions/_shared/accountingStagingGuard.js"
+      - "supabase/functions/_shared/accountingOwnerMonthlyReport.js"
+      - "supabase/functions/_shared/accountingPrivateLedgerRead.js"
+      - "supabase/functions/_shared/accountingOwnerSourcePreview.js"
+      - "docs/sql/accounting-schema-review.sql"
+      - "docs/sql/accounting-posting-staging.sql"
+      - "docs/sql/accounting-reports-staging.sql"
+      - "tests/sql/accounting-*.sql"
+      - "tests/sql/accounting-*.mjs"
+      - "src/routes/AppRoutes.jsx"
+      - "src/components/layout/Sidebar.jsx"
+      - "tests/hpp*.test.js"
+      - ".github/workflows/hpp-staging-checks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: HPP unit tests
+        run: node --test tests/hpp*.test.js
+      - name: HPP lint
+        run: npx eslint src/components/forms/StockAdditionForm.jsx src/components/accounting/CafeExceptionPanel.jsx src/services/accountingCafeExceptionService.js supabase/functions/_shared/accountingCafeExceptionReview.js src/components/accounting/CafeLedgerPanel.jsx src/services/accountingCafeLedgerService.js supabase/functions/_shared/accountingCafeLedgerReview.js src/pages/finance/CafeReconciliation.jsx src/services/accountingCafeReportService.js supabase/functions/_shared/accountingCafeReport.js supabase/functions/_shared/accountingCafeReportReview.js src/components/accounting/ProductCostFlowPanel.jsx src/services/accountingProductFlowService.js supabase/functions/_shared/accountingProductFlowReview.js src/utils/hppBatchAssessment.js src/utils/hppCostReview.js src/utils/hppMonthlyAllocation.js src/utils/hppHistoricalValuation.js src/utils/hppCutoverOpening.js src/utils/accountingOpeningJournal.js src/utils/accountingPostedReports.js src/utils/accountingEventProposals.js src/utils/accountingSourceReadiness.js src/services/accountingSourceReadinessService.js src/pages/finance/AccountingSourceReadiness.jsx src/pages/finance/OwnerBusinessHealth.jsx src/components/accounting/FinancialTrendChart.jsx src/utils/accountingBusinessHealth.js src/utils/accountingVerifiedSourceBridge.js src/utils/accountingLotValuation.js src/utils/accountingSaleStockReconciliation.js src/utils/accountingSaleLotAllocation.js src/utils/accountingNewLotReleasePlan.js src/utils/accountingLotReleaseTransport.js src/utils/accountingStockWriterReadiness.js src/services/accountingSaleStockAuditService.js src/pages/finance/SaleLotTraceAudit.jsx src/utils/accountingBatchLotAudit.js src/services/accountingBatchLotReadService.js src/services/accountingBusinessHealthService.js supabase/functions/_shared/accountingOwnerReadiness.js supabase/functions/_shared/accountingStagingGuard.js supabase/functions/_shared/accountingOwnerMonthlyReport.js supabase/functions/_shared/accountingPrivateLedgerRead.js supabase/functions/_shared/accountingOwnerSourcePreview.js src/components/hpp/OpeningJournalPreview.jsx src/services/hppCutoverService.js src/pages/finance/CutoverPreparation.jsx src/services/hppHistoricalValuationService.js src/components/hpp/HistoricalInventoryAudit.jsx src/services/batchCostingReadService.js src/services/hppAuditService.js src/pages/finance/HppAudit.jsx src/routes/AppRoutes.jsx src/components/layout/Sidebar.jsx
+      - name: Verify protected staging Auth script syntax
+        run: |
+          node --check scripts/staging/stagingTarget.mjs
+          node --check scripts/staging/owner-auth-smoke.mjs
+      - name: Production build
+        run: npm run build
+      - name: Build actual staging finance branches without credentials
+        env:
+          VITE_SUPABASE_URL: https://pkgrqalpazhwdcxmthvb.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_synthetic_ci_build_only
+        run: |
+          npx vite build --outDir dist-staging --emptyOutDir
+          node --input-type=module <<'JS'
+          import {readdirSync,readFileSync} from 'node:fs';
+          const js=readdirSync('dist-staging/assets').filter(x=>x.startsWith('index-')&&x.endsWith('.js')).map(x=>readFileSync('dist-staging/assets/'+x,'utf8')).join('');
+          for(const marker of ['accounting-cafe-exceptions','Penerimaan uang muka','Waste produk di kafe','accounting-owner-monthly-report'])if(!js.includes(marker))throw Error('Staging finance branch absent: '+marker);
+          console.log('PASS: staging advance, waste and posted-report UI are included; synthetic build key only');
+          JS
+
+  accounting-postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        pg_version: ["16", "17"]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:${{ matrix.pg_version }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: bunbun_ci_only
+          POSTGRES_DB: bunbun_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bunbun_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: bunbun_ci_only
+      PGDATABASE: bunbun_ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Isolated auth and role fixtures
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+      - name: Reviewed accounting schema on ephemeral PG only
+        run: psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-schema-review.sql
+      - name: Posting procedure and immutable journal guards
+        run: psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-posting-staging.sql
+      - name: Real SQL posting test suite
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-posting-e2e.sql
+      - name: Verify bakery lifecycle and financial reports in fresh CI database
+        run: |
+          createdb bunbun_lifecycle_ci
+          PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-schema-review.sql
+          PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-posting-staging.sql
+          PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-reports-staging.sql
+          PGDATABASE=bunbun_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-bakery-lifecycle.sql
+      - name: Verify Owner report endpoint SQL and exact-cent reconciliation against PostgreSQL
+        run: |
+          node tests/sql/accounting-owner-report-integration.mjs emit > /tmp/bunbun-owner-report-ci.sql
+          PGDATABASE=bunbun_lifecycle_ci psql -X -q -A -t -v ON_ERROR_STOP=1 -f /tmp/bunbun-owner-report-ci.sql > /tmp/bunbun-owner-report-ci.json
+          node tests/sql/accounting-owner-report-integration.mjs assert /tmp/bunbun-owner-report-ci.json
+
+  lot-release-postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        pg_version: ["16", "17"]
+    name: Private atomic lot release — isolated PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:${{ matrix.pg_version }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: bunbun_lot_ci_only
+          POSTGRES_DB: bunbun_lot_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bunbun_lot_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: bunbun_lot_ci_only
+      PGDATABASE: bunbun_lot_ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Postgres client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Load isolated Auth and profiles
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+      - name: Load minimal production stock fixtures
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+      - name: Load private lot positions and transactional release prototype
+        run: psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+      - name: Test atomic multi-product release, rollback and idempotency
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-e2e.sql
+      - name: Verify simultaneous Owner requests cannot spend the same lot twice
+        run: |
+          createdb bunbun_lot_race_ci
+          PGDATABASE=bunbun_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-concurrency-seed.sql
+          PGDATABASE=bunbun_lot_race_ci bash tests/sql/accounting-lot-concurrency.sh
+      - name: Verify cutover writer gate prevents all legacy stock paths
+        run: |
+          createdb bunbun_lot_guard_ci
+          PGDATABASE=bunbun_lot_guard_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_lot_guard_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_lot_guard_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_lot_guard_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-concurrency-seed.sql
+          PGDATABASE=bunbun_lot_guard_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_lot_guard_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-writer-gate-e2e.sql
+      - name: Verify frozen-to-proofing and baking with root/derived lot conservation
+        run: |
+          createdb bunbun_frozen_baking_ci
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_frozen_baking_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-e2e.sql
+      - name: Verify competing frozen releases cannot consume the same lot twice
+        run: |
+          createdb bunbun_frozen_race_ci
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_frozen_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-race-seed.sql
+          PGDATABASE=bunbun_frozen_race_ci bash tests/sql/accounting-frozen-race.sh
+      - name: Verify shaping root and parent batch lifecycle with real PostgreSQL source splits
+        run: |
+          createdb bunbun_shaping_ci
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-bootstrap.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-shaping-batch-staging.sql
+          PGDATABASE=bunbun_shaping_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-e2e.sql
+      - name: Ensure simultaneous shaping requests cannot create duplicated root lots
+        run: |
+          createdb bunbun_shaping_race_ci
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-bootstrap.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-shaping-batch-staging.sql
+          PGDATABASE=bunbun_shaping_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-race-seed.sql
+          PGDATABASE=bunbun_shaping_race_ci bash tests/sql/accounting-shaping-race.sh
+      - name: Verify atomically lot-traced sale and return/revision without double COGS
+        run: |
+          createdb bunbun_sales_lot_ci
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-sales-bootstrap.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-lot-staging.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-create-staging.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-cancel-staging.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-edit-staging.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-sales-lot-e2e.sql
+          PGDATABASE=bunbun_sales_lot_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-sales-edit-e2e.sql
+      - name: Verify concurrent sales never double-spend same finished lot
+        run: |
+          createdb bunbun_sales_lot_race_ci
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-sales-bootstrap.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-lot-staging.sql
+          PGDATABASE=bunbun_sales_lot_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-create-staging.sql
+          PGDATABASE=bunbun_sales_lot_race_ci bash tests/sql/accounting-sale-race.sh
+      - name: Verify single-product cafe shipment shares exact multi-lot atomic writer
+        run: |
+          createdb bunbun_single_cafe_ci
+          PGDATABASE=bunbun_single_cafe_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_single_cafe_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_single_cafe_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_single_cafe_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-concurrency-seed.sql
+          PGDATABASE=bunbun_single_cafe_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_single_cafe_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-single-cafe-lot-staging.sql
+          PGDATABASE=bunbun_single_cafe_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-single-cafe-lot-e2e.sql
+      - name: Verify finished-product stock adjustments preserve actual lot sources without cash/HPP writes
+        run: |
+          createdb bunbun_product_adjust_ci
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-concurrency-seed.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-staging.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
+          PGDATABASE=bunbun_product_adjust_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-product-adjustment-e2e.sql
+      - name: Verify concurrent adjustments cannot waste same lot stock twice
+        run: |
+          createdb bunbun_adjust_race_ci
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-concurrency-seed.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-staging.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
+          PGDATABASE=bunbun_adjust_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-adjustment-race-seed.sql
+          PGDATABASE=bunbun_adjust_race_ci bash tests/sql/accounting-adjustment-race.sh
+      - name: Validate all nine stock writers together with one deferred invariant
+        run: |
+          createdb bunbun_unified_lifecycle_ci
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-bootstrap.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-shaping-batch-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-unified-sales-bootstrap.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-lot-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-create-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-cancel-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-edit-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-single-cafe-lot-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-unified-stock-gate-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-unified-position-protection-staging.sql
+          PGDATABASE=bunbun_unified_lifecycle_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-unified-lifecycle-e2e.sql
+      - name: Verify unified sale and stock adjustment compete for the same finished lot safely
+        run: |
+          createdb bunbun_unified_cross_race_ci
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-staging-bootstrap.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-lot-release-bootstrap.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-release-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-frozen-baking-bootstrap.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-lot-writer-gate-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-frozen-baking-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-shaping-batch-bootstrap.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-shaping-batch-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-unified-sales-bootstrap.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-lot-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-create-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-cancel-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-sales-edit-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-single-cafe-lot-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-product-adjustment-operations-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-unified-stock-gate-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f docs/sql/accounting-unified-position-protection-staging.sql
+          PGDATABASE=bunbun_unified_cross_race_ci psql -X -v ON_ERROR_STOP=1 -f tests/sql/accounting-unified-sale-adjustment-race-seed.sql
+          PGDATABASE=bunbun_unified_cross_race_ci bash tests/sql/accounting-unified-sale-adjustment-race.sh
+
+  edge-owner-auth:
+    name: Staging Owner Edge typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked packages for Deno npm resolver
+        run: npm ci --no-audit --no-fund
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck staging-only Edge Function
+        run: deno check supabase/functions/accounting-cafe-exceptions/index.ts supabase/functions/accounting-cafe-ledger/index.ts supabase/functions/accounting-cafe-report/index.ts supabase/functions/accounting-product-flow/index.ts supabase/functions/accounting-production/index.ts supabase/functions/accounting-material/index.ts supabase/functions/accounting-revenue/index.ts supabase/functions/accounting-expense/index.ts supabase/functions/accounting-purchase/index.ts supabase/functions/accounting-owner-readiness/index.ts supabase/functions/accounting-owner-monthly-report/index.ts supabase/functions/accounting-owner-source-preview/index.ts

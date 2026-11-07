@@ -18,8 +18,14 @@ import Inventory from "../pages/inventory/Inventory";
 import ProductStock from "../pages/inventory/ProductStock";
 import Purchasing from "../pages/purchasing/Purchasing";
 import Maintenance from "../pages/maintenance/Maintenance";
+import CafeReconciliation from "../pages/finance/CafeReconciliation";
 import Income from "../pages/finance/Income";
 import Expense from "../pages/finance/Expense";
+import HppAudit from "../pages/finance/HppAudit";
+import CutoverPreparation from "../pages/finance/CutoverPreparation";
+import AccountingSourceReadiness from "../pages/finance/AccountingSourceReadiness";
+import SaleLotTraceAudit from "../pages/finance/SaleLotTraceAudit";
+import OwnerBusinessHealth from "../pages/finance/OwnerBusinessHealth";
 import Sales from "../pages/sales/Sales";
 import Reports from "../pages/reports/Reports";
 import Settings from "../pages/settings/Settings";
@@ -43,7 +49,7 @@ export default function AppRoutes() {
           <Route index element={<Dashboard />} />
           <Route path="profile" element={<Profile />} />
 
-          <Route path="users" element={<RoleRoute allowedRoles={["owner"]}><UserManagement /></RoleRoute>} />
+          <Route path="users" element={<RoleRoute allowedRoles={["owner", "admin"]}><UserManagement /></RoleRoute>} />
           <Route path="products" element={<RoleRoute allowedRoles={["owner"]}><Products /></RoleRoute>} />
           <Route path="categories" element={<RoleRoute allowedRoles={["owner"]}><Categories /></RoleRoute>} />
           <Route path="ingredients" element={<RoleRoute allowedRoles={["owner"]}><Ingredients /></RoleRoute>} />
@@ -60,12 +66,18 @@ export default function AppRoutes() {
           <Route path="purchasing" element={<RoleRoute allowedRoles={["owner", "baker"]}><Purchasing /></RoleRoute>} />
           <Route path="maintenance" element={<RoleRoute allowedRoles={["owner", "baker"]}><Maintenance /></RoleRoute>} />
 
-          <Route path="finance/income" element={<RoleRoute allowedRoles={["owner"]}><Income /></RoleRoute>} />
+          <Route path="finance/cafe-reconciliation" element={<RoleRoute allowedRoles={["owner"]}><CafeReconciliation /></RoleRoute>} />
+          <Route path="finance/income" element={<RoleRoute allowedRoles={["owner", "cashier"]}><Income /></RoleRoute>} />
 
           {/* Penjualan dapat diinput oleh Owner dan Baker */}
           <Route path="sales" element={<RoleRoute allowedRoles={["owner", "baker"]}><Sales /></RoleRoute>} />
 
-          <Route path="finance/expense" element={<RoleRoute allowedRoles={["owner"]}><Expense /></RoleRoute>} />
+          <Route path="finance/expense" element={<RoleRoute allowedRoles={["owner", "cashier"]}><Expense /></RoleRoute>} />
+          <Route path="finance/hpp-audit" element={<RoleRoute allowedRoles={["owner"]}><HppAudit /></RoleRoute>} />
+          <Route path="finance/cutover" element={<RoleRoute allowedRoles={["owner"]}><CutoverPreparation /></RoleRoute>} />
+          <Route path="finance/source-audit" element={<RoleRoute allowedRoles={["owner"]}><AccountingSourceReadiness /></RoleRoute>} />
+          <Route path="finance/sale-lot-audit" element={<RoleRoute allowedRoles={["owner"]}><SaleLotTraceAudit /></RoleRoute>} />
+          <Route path="finance/business-health" element={<RoleRoute allowedRoles={["owner"]}><OwnerBusinessHealth /></RoleRoute>} />
           <Route path="reports" element={<RoleRoute allowedRoles={["owner", "baker"]}><Reports /></RoleRoute>} />
           <Route path="settings" element={<RoleRoute allowedRoles={["owner"]}><Settings /></RoleRoute>} />
           <Route path="settings/go-live" element={<RoleRoute allowedRoles={["owner"]}><GoLiveChecklist /></RoleRoute>} />

@@ -5,6 +5,9 @@ import Currency from "../../components/ui/Currency";
 import LoadingState from "../../components/ui/LoadingState";
 import Modal from "../../components/modal/Modal";
 import SalesForm from "../../components/forms/SalesForm";
+import RevenueAccountingPanel from "../../components/accounting/RevenueAccountingPanel";
+import { purchaseAccountingAvailable } from "../../services/accountingPurchaseService";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   createSale,
@@ -33,6 +36,7 @@ function getToday() {
 }
 
 export default function Sales() {
+  const { role } = useAuth();
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState("");
@@ -224,6 +228,8 @@ export default function Sales() {
           </div>
         </div>
       </div>
+
+      {role === "owner" && purchaseAccountingAvailable && <RevenueAccountingPanel kind="sale" sources={sales} onPosted={loadSales} />}
 
       <div className="mb-6 grid gap-4 md:grid-cols-4">
         <div className="rounded-xl border border-green-200 bg-green-50 p-5">

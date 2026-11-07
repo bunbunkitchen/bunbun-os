@@ -8,6 +8,8 @@ import MasterPage from "../../components/ui/MasterPage";
 import Currency from "../../components/ui/Currency";
 import LoadingState from "../../components/ui/LoadingState";
 import PurchaseForm from "../../components/forms/PurchaseForm";
+import PurchaseAccountingPanel from "../../components/accounting/PurchaseAccountingPanel";
+import { purchaseAccountingAvailable } from "../../services/accountingPurchaseService";
 import { useAuth } from "../../context/AuthContext";
 
 import {
@@ -209,6 +211,9 @@ export default function Purchasing() {
           </p>
         </div>
       )}
+
+      {isOwner && purchaseAccountingAvailable && <PurchaseAccountingPanel purchases={purchases}
+        onPosted={async () => setPurchases(await getAllPurchases())} />}
 
       <MasterPage
         title="Purchasing"

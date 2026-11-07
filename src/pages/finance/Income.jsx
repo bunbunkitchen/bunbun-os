@@ -10,6 +10,9 @@ import Button from "../../components/ui/Button";
 import LoadingState from "../../components/ui/LoadingState";
 import Modal from "../../components/modal/Modal";
 import IncomeForm from "../../components/forms/IncomeForm";
+import RevenueAccountingPanel from "../../components/accounting/RevenueAccountingPanel";
+import { purchaseAccountingAvailable } from "../../services/accountingPurchaseService";
+import { useAuth } from "../../context/AuthContext";
 
 import { useToast } from "../../context/ToastContext";
 
@@ -21,6 +24,7 @@ import {
 } from "../../services/incomeService";
 
 export default function Income() {
+  const { role } = useAuth();
   const toast = useToast();
 
   const [incomes, setIncomes] =
@@ -282,6 +286,9 @@ export default function Income() {
           />
         </p>
       </div>
+
+      {role === "owner" && purchaseAccountingAvailable && <RevenueAccountingPanel kind="income" sources={incomes}
+        onPosted={async () => setIncomes(await getAllIncomes())} />}
 
       <MasterPage
         title="Pemasukan"

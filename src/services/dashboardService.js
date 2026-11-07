@@ -96,6 +96,40 @@ export async function getDashboardSummary() {
   const isBaker = role === "baker";
   const canSeePurchase = isOwner || isBaker;
 
+  if (role === "cashier") {
+    const [incomeResult, expenseResult] = await Promise.all([
+      supabase
+        .from("incomes")
+        .select("pemasukan_bunbun")
+        .eq("tanggal", today)
+        .eq("is_deleted", false),
+      supabase
+        .from("expenses")
+        .select("nominal")
+        .eq("tanggal", today)
+        .eq("is_deleted", false),
+    ]);
+    validateResults([incomeResult, expenseResult]);
+
+    const income = sumBy(incomeResult.data, "pemasukan_bunbun");
+    const expense = sumBy(expenseResult.data, "nominal");
+    return {
+      income,
+      expense,
+      profit: income - expense,
+      purchaseToday: 0,
+      productionOrders: 0,
+      draftOrders: 0,
+      generatedOrders: 0,
+      activeBatch: 0,
+      finishedBatch: 0,
+      finishedQty: 0,
+      rejectedQty: 0,
+      inventoryTransactions: 0,
+      activeBatchItems: [],
+    };
+  }
+
   const [orderResult, batchResult, inventoryResult] = await Promise.all([
     supabase
       .from("production_orders")

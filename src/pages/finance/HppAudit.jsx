@@ -1,0 +1,221 @@
+import { useEffect, useState } from "react";
+import { getMonthlyHppAudit } from "../../services/hppAuditService";
+import { getBatchLotSourceAudit } from "../../services/accountingBatchLotReadService";
+import ProductCostFlowPanel from "../../components/accounting/ProductCostFlowPanel";
+import ProductionAccountingPanel from "../../components/accounting/ProductionAccountingPanel";
+import MaterialAccountingPanel from "../../components/accounting/MaterialAccountingPanel";
+import { purchaseAccountingAvailable } from "../../services/accountingPurchaseService";
+import HistoricalInventoryAudit from "../../components/hpp/HistoricalInventoryAudit";
+
+const rupiah = n => Number(n || 0).toLocaleString("id-ID", {
+  style: "currency", currency: "IDR", maximumFractionDigits: 0,
+});
+function currentMonthWib() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit"
+  }).formatToParts(new Date());
+  return `${parts.find(p => p.type === "year").value}-${parts.find(p => p.type === "month").value}`;
+}
+export default function HppAudit() {
+  const [month, setMonth] = useState(currentMonthWib);
+  const [audit, setAudit] = useState(null);
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState("");
+  const [batchId, setBatchId] = useState("");
+  const [batchInfo, setBatchInfo] = useState(null);
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchError, setBatchError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    getMonthlyHppAudit(month)
+      .then(value => { if (!cancelled) setAudit(value); })
+      .catch(err => { if (!cancelled) setError(err.message || "Audit gagal dimuat."); })
+      .finally(() => { if (!cancelled) setBusy(false); });
+    return () => { cancelled = true; };
+  }, [month]);
+
+  function handleMonthChange(event) {
+    setMonth(event.target.value);
+    setBusy(true);
+    setAudit(null);
+    setBatchInfo(null);
+    setBatchId("");
+    setError("");
+  }
+
+  async function inspectBatch(event, chosenId = batchId) {
+    if (event) event.preventDefault();
+    setBatchId(String(chosenId));
+    setBatchBusy(true);
+    setBatchError("");
+    setBatchInfo(null);
+    try { setBatchInfo(await getBatchLotSourceAudit(chosenId)); }
+    catch (err) { setBatchError(err.message || "Gagal memuat batch."); }
+    finally { setBatchBusy(false); }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-[#595E48]">Audit Biaya HPP</h1>
+        <p className="mt-1 text-sm text-[#777A6D]">Pemeriksaan read-only biaya bulanan dan batch produksi.</p>
+      </div>
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <strong>Belum menjadi HPP aktual.</strong> Pengeluaran kas berbeda dari biaya produksi.
+        Gaji, gas, kemasan, perlengkapan, dan aset perlu diklasifikasikan serta direkonsiliasi dahulu.
+        Panel audit membaca data. Panel biaya bahan staging di bawah memerlukan pemeriksaan dan konfirmasi Owner sebelum mencatat jurnal.
+      </div>
+      <div className="rounded-xl border border-[#D9D8D0] bg-white p-5">
+        <label htmlFor="audit-month" className="mr-3 text-sm font-semibold">Bulan</label>
+        <input id="audit-month" type="month" value={month} onChange={handleMonthChange}
+          className="rounded-lg border border-[#D9D8D0] px-3 py-2" />
+      </div>
+      {busy && <p>Memuat data...</p>}
+      {error && <p role="alert" className="text-red-700">{error}</p>}
+      {audit && !busy && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border bg-white p-4">
+              <p className="text-sm text-[#777A6D]">Total pengeluaran kas</p>
+              <p className="text-xl font-bold">{rupiah(audit.expensesReview.totalPaid)}</p>
+              <p className="text-xs">Bukan biaya HPP yang disetujui</p>
+            </div>
+            <div className="rounded-xl border bg-white p-4">
+              <p className="text-sm text-[#777A6D]">Batch dibuat bulan ini</p>
+              <p className="text-xl font-bold">{audit.batches.count}</p>
+              <p className="text-xs">Berdasarkan waktu dibuat (WIB)</p>
+            </div>
+            <div className="rounded-xl border bg-white p-4">
+              <p className="text-sm text-[#777A6D]">Kolom selesai (pcs)</p>
+              <p className="text-xl font-bold">{audit.batches.completedUnitsField.toLocaleString("id-ID")}</p>
+              <p className="text-xs">Belum direkonsiliasi terhadap split/frozen</p>
+            </div>
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+              <p className="text-sm text-amber-900">Pemakaian bahan belum bernilai</p>
+              <p className="text-xl font-bold text-amber-900">
+                {audit.materialValuation.missingValueCount.toLocaleString("id-ID")} / {audit.materialValuation.transactionCount.toLocaleString("id-ID")}
+              </p>
+              <p className="text-xs text-amber-800">Berdasarkan tanggal transaksi; HPP belum boleh diposting</p>
+            </div>
+          </div>
+          <section className="rounded-xl border bg-white p-5">
+            <h2 className="mb-3 text-lg font-semibold">Ringkasan kategori pengeluaran</h2>
+            <div className="overflow-x-auto"><table className="w-full text-sm">
+              <thead><tr className="border-b text-left">
+                <th className="py-2">Kategori kas</th><th className="text-right">Transaksi</th>
+                <th className="text-right">Nominal</th>
+              </tr></thead>
+              <tbody>{audit.expensesReview.categories.map(row => (
+                <tr key={row.kategori} className="border-b">
+                  <td className="py-2">{row.kategori}</td>
+                  <td className="text-right">{row.jumlahTransaksi}</td>
+                  <td className="text-right">{rupiah(row.nominal)}</td>
+                </tr>
+              ))}</tbody>
+            </table></div>
+          </section>
+          <section className="rounded-xl border bg-white p-5">
+            <h2 className="mb-3 text-lg font-semibold">Rincian untuk rekonsiliasi</h2>
+            <div className="max-h-[400px] overflow-auto"><table className="w-full min-w-[600px] text-sm">
+              <thead><tr className="border-b text-left">
+                <th className="py-2">Tanggal</th><th>Kategori</th><th>Keterangan</th>
+                <th className="text-right">Nominal</th><th className="pl-3">Sumber</th>
+              </tr></thead>
+              <tbody>{audit.expensesReview.rows.map(row => (
+                <tr key={row.id} className="border-b align-top">
+                  <td className="py-2 pr-2">{row.tanggal}</td>
+                  <td className="pr-2">{row.kategori}</td>
+                  <td className="pr-2">{row.keterangan || "-"}
+                    {row.warning && <p className="text-amber-700">{row.warning}</p>}
+                  </td>
+                  <td className="text-right">{rupiah(row.nominal)}</td>
+                  <td className="pl-3">{row.purchaseId ? `Pembelian #${row.purchaseId}` : "Kas langsung"}</td>
+                </tr>
+              ))}</tbody>
+            </table></div>
+            <p className="mt-2 text-xs text-[#777A6D]">
+              Semua pengeluaran belum diklasifikasikan menjadi biaya akrual. Pembelian tidak dijumlahkan ulang.
+            </p>
+          </section>
+        </>
+      )}
+      <HistoricalInventoryAudit />
+      <section className="rounded-xl border bg-white p-5">
+        <h2 className="text-lg font-semibold">Pemeriksaan batch</h2>
+        <p className="mt-1 text-sm">Periksa baris bahan yang belum mempunyai nilai persediaan dan jumlah split.</p>
+        {audit?.batches.rows?.length > 0 && (
+          <div className="mt-3 max-h-52 overflow-y-auto rounded-lg border p-2">
+            <p className="mb-2 text-xs text-[#777A6D]">Pilih batch dari bulan yang dipilih:</p>
+            {audit.batches.rows.map(b => (
+              <button key={b.id} type="button" disabled={batchBusy}
+                onClick={() => inspectBatch(null, b.id)}
+                className="mb-1 mr-1 rounded border px-2 py-1 text-xs hover:bg-[#F1F3ED] disabled:opacity-50">
+                {b.kode || `Batch #${b.id}`}
+              </button>
+            ))}
+          </div>
+        )}
+        <form onSubmit={inspectBatch} className="mt-3 flex gap-2">
+          <input aria-label="ID batch" type="number" min="1" step="1" required
+            value={batchId} onChange={e => setBatchId(e.target.value)}
+            className="w-36 rounded-lg border px-3 py-2" placeholder="ID batch" />
+          <button type="submit" disabled={batchBusy}
+            className="rounded-lg bg-[#595E48] px-4 py-2 text-white disabled:opacity-50">
+            {batchBusy ? "Memeriksa..." : "Periksa"}
+          </button>
+        </form>
+        {batchError && <p role="alert" className="mt-2 text-red-700">{batchError}</p>}
+        {batchInfo && <div className="mt-3 rounded-lg bg-[#F1F3ED] p-4 text-sm">
+          <p className="font-bold">{batchInfo.batch.kode}</p>
+          <p>Pemakaian bahan: {batchInfo.materials.length} baris</p>
+          <p>Bahan belum bernilai: {batchInfo.missingMaterialValues.length} baris</p>
+          <p>Split: {batchInfo.splits.length} baris</p>
+          <p>Status audit: {batchInfo.costingStatus} (bukan HPP final)</p>
+          {batchInfo.lotAudit && <div className="mt-4 space-y-3 border-t border-[#D4D9D0] pt-4">
+            <h3 className="font-bold text-[#4E5D48]">Penelusuran Lot Asal & Frozen</h3>
+            <p>Split produksi asal: <strong>{batchInfo.lotAudit.rootSplitCount}</strong> ·
+              Split turunan frozen: <strong>{batchInfo.lotAudit.derivedSplitCount}</strong>
+            </p>
+            <p>Mutasi perpindahan frozen terdeteksi: <strong>{batchInfo.lotAudit.otherStockMovementCount}</strong>.
+              Mutasi tersebut tidak dianggap produksi baru atau HPP terjual.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[500px] text-xs">
+                <thead><tr className="border-b text-left">
+                  <th className="py-2">Split</th><th>Lokasi asal</th>
+                  <th className="text-right">Qty layak</th><th className="text-right">Mutasi stok</th>
+                  <th className="pl-3">Cocok?</th>
+                </tr></thead>
+                <tbody>{batchInfo.lotAudit.releaseRows.map(row => <tr key={row.splitId} className="border-b">
+                  <td className="py-2">#{row.splitId}</td>
+                  <td>{row.route === "FROZEN" ? "Frozen" : "Produk jadi"}</td>
+                  <td className="text-right">{row.qtyExpected ?? "?"}</td>
+                  <td className="text-right">{row.qtyReleased ?? "?"}</td>
+                  <td className="pl-3">{row.sourceQtyConfirmed ? "Sesuai" : "Perlu verifikasi"}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+            <p className="font-semibold text-amber-900">
+              Nilai HPP dan biaya produk terjual: belum tersedia sebagai angka aktual.
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-amber-900">
+              {batchInfo.lotAudit.issues.map((message,idx) => <li key={idx}>{message}</li>)}
+            </ul>
+            <p className="text-xs text-[#777A6D]">
+              Audit ini hanya membaca catatan split dan mutasi stok. Alokasi biaya bahan, tenaga kerja,
+              overhead, reject serta barang benar-benar terjual tetap memerlukan bukti yang disahkan.
+            </p>
+          </div>}
+          {batchInfo.warnings?.length > 0 && <ul className="mt-2 list-disc pl-5 text-amber-900">
+            {batchInfo.warnings.map((warning, idx) => <li key={idx}>{warning}</li>)}
+          </ul>}
+        </div>}
+      </section>
+      {purchaseAccountingAvailable && batchInfo && <MaterialAccountingPanel key={batchInfo.batch.id}
+        materials={batchInfo.materials} batchCode={batchInfo.batch.kode} />}
+      {purchaseAccountingAvailable && batchInfo && <ProductionAccountingPanel key={"cost-"+batchInfo.batch.id}
+        batchId={batchInfo.batch.id} batchCode={batchInfo.batch.kode} expenses={audit?.expensesReview.rows || []} />}
+      {purchaseAccountingAvailable && <ProductCostFlowPanel />}
+    </div>
+  );
+}

@@ -10,22 +10,29 @@ import {
   MdClose,
 } from "react-icons/md";
 
+import { useAuth } from "../../context/AuthContext";
+
 import {
   getAllUsers,
+  inviteManagedUser,
   updateUserProfile,
 } from "../../services/userService";
 
 function getRoleLabel(role) {
   const labels = {
+    admin: "Admin",
     owner: "Owner",
     baker: "Baker",
     helper: "Helper",
+    cashier: "Cashier",
   };
 
   return labels[role] ?? role;
 }
 
 export default function UserManagement() {
+  const { role, user } = useAuth();
+  const isOwner = role === "owner";
   const [users, setUsers] = useState([]);
   const [loading, setLoading] =
     useState(true);
@@ -43,6 +50,17 @@ export default function UserManagement() {
     successMessage,
     setSuccessMessage,
   ] = useState("");
+
+  const [inviteForm, setInviteForm] = useState({
+    email: "",
+    fullName: "",
+    role: isOwner ? "baker" : "helper",
+  });
+  const [inviting, setInviting] = useState(false);
+
+  const assignableRoles = isOwner
+    ? ["owner", "admin", "baker", "helper", "cashier"]
+    : ["baker", "helper", "cashier"];
 
   async function loadUsers() {
     setLoading(true);
@@ -67,7 +85,10 @@ export default function UserManagement() {
   }
 
   useEffect(() => {
-    void loadUsers();
+    const timer = window.setTimeout(() => {
+      void loadUsers();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   function openEdit(user) {
@@ -143,6 +164,33 @@ export default function UserManagement() {
     }
   }
 
+  async function handleInvite(event) {
+    event.preventDefault();
+    setInviting(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      await inviteManagedUser(inviteForm);
+      setInviteForm({
+        email: "",
+        fullName: "",
+        role: isOwner ? "baker" : "helper",
+      });
+      setSuccessMessage("Undangan pengguna berhasil dikirim.");
+      await loadUsers();
+    } catch (error) {
+      console.error("Gagal mengundang pengguna:", error);
+      setErrorMessage(error?.message || "Undangan pengguna gagal dikirim.");
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  const visibleUsers = isOwner
+    ? users
+    : users.filter((item) => item.id !== user?.id);
+
   return (
     <div className="space-y-6">
       <div>
@@ -174,43 +222,84 @@ export default function UserManagement() {
         </div>
       )}
 
+      <form
+        onSubmit={handleInvite}
+        className="grid gap-3 rounded-2xl border bg-white p-5 shadow-sm md:grid-cols-4"
+      >
+        <input
+          type="text"
+          value={inviteForm.fullName}
+          onChange={(event) => setInviteForm((current) => ({ ...current, fullName: event.target.value }))}
+          placeholder="Nama pengguna"
+          aria-label="Nama pengguna baru"
+          className="rounded-lg border border-gray-300 px-3 py-2.5 outline-none focus:border-amber-600"
+          required
+        />
+        <input
+          type="email"
+          value={inviteForm.email}
+          onChange={(event) => setInviteForm((current) => ({ ...current, email: event.target.value }))}
+          placeholder="Email pengguna"
+          aria-label="Email pengguna baru"
+          className="rounded-lg border border-gray-300 px-3 py-2.5 outline-none focus:border-amber-600"
+          required
+        />
+        <select
+          value={inviteForm.role}
+          onChange={(event) => setInviteForm((current) => ({ ...current, role: event.target.value }))}
+          aria-label="Role pengguna baru"
+          className="rounded-lg border border-gray-300 px-3 py-2.5 outline-none focus:border-amber-600"
+        >
+          {assignableRoles.map((item) => (
+            <option key={item} value={item}>{getRoleLabel(item)}</option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          disabled={inviting}
+          className="rounded-lg bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {inviting ? "Mengirim undangan..." : "Undang Pengguna"}
+        </button>
+      </form>
+
       {loading ? (
         <div className="rounded-2xl border bg-white p-6 text-sm text-gray-500 shadow-sm">
           Memuat pengguna...
         </div>
-      ) : users.length === 0 ? (
+      ) : visibleUsers.length === 0 ? (
         <div className="rounded-2xl border bg-white p-6 text-sm text-gray-500 shadow-sm">
           Belum ada pengguna.
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          {users.map((user) => (
+          {visibleUsers.map((item) => (
             <article
-              key={user.id}
+              key={item.id}
               className="rounded-2xl border bg-white p-5 shadow-sm"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <h2 className="truncate font-semibold text-gray-900">
-                    {user.full_name ||
+                    {item.full_name ||
                       "Tanpa Nama"}
                   </h2>
 
                   <p className="mt-1 text-sm text-gray-500">
                     {getRoleLabel(
-                      user.role
+                      item.role
                     )}
                   </p>
                 </div>
 
                 <span
                   className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
-                    user.is_active
+                    item.is_active
                       ? "bg-green-100 text-green-700"
                       : "bg-red-100 text-red-700"
                   }`}
                 >
-                  {user.is_active
+                  {item.is_active
                     ? "Aktif"
                     : "Nonaktif"}
                 </span>
@@ -219,7 +308,7 @@ export default function UserManagement() {
               <button
                 type="button"
                 onClick={() =>
-                  openEdit(user)
+                  openEdit(item)
                 }
                 className="mt-5 inline-flex items-center gap-2 rounded-lg border border-amber-700 px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-50"
               >
@@ -303,17 +392,11 @@ export default function UserManagement() {
                   }
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
                 >
-                  <option value="owner">
-                    Owner
-                  </option>
-
-                  <option value="baker">
-                    Baker
-                  </option>
-
-                  <option value="helper">
-                    Helper
-                  </option>
+                  {assignableRoles.map((item) => (
+                    <option key={item} value={item}>
+                      {getRoleLabel(item)}
+                    </option>
+                  ))}
                 </select>
               </div>
 

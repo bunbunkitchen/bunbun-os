@@ -18,17 +18,21 @@ import {
   MdMoneyOff,
   MdAssessment,
   MdBuild,
+  MdPeople,
   MdClose,
 } from "react-icons/md";
 
 import { useAuth } from "../../context/AuthContext";
 
+import {purchaseAccountingAvailable} from "../../services/accountingPurchaseService";
+
 const menus = [
+  ...(purchaseAccountingAvailable ? [{name: "Rekonsiliasi Kafe", path: "/finance/cafe-reconciliation", icon: <MdAssessment />, roles: ["owner"]}] : []),
   {
     name: "Dashboard",
     path: "/",
     icon: <MdDashboard />,
-    roles: ["owner", "baker", "helper"],
+    roles: ["owner", "baker", "helper", "admin", "cashier"],
   },
   {
     name: "Produk",
@@ -88,7 +92,7 @@ const menus = [
     name: "Pemasukan",
     path: "/finance/income",
     icon: <MdAttachMoney />,
-    roles: ["owner"],
+    roles: ["owner", "cashier"],
   },
   {
     name: "Penjualan",
@@ -100,6 +104,36 @@ const menus = [
     name: "Pengeluaran",
     path: "/finance/expense",
     icon: <MdMoneyOff />,
+    roles: ["owner", "cashier"],
+  },
+  {
+    name: "Keuntungan & Pertumbuhan",
+    path: "/finance/business-health",
+    icon: <MdDashboard />,
+    roles: ["owner"],
+  },
+  {
+    name: "Persiapan Saldo Awal",
+    path: "/finance/cutover",
+    icon: <MdAttachMoney />,
+    roles: ["owner"],
+  },
+  {
+    name: "Audit Penjualan & Lot",
+    path: "/finance/sale-lot-audit",
+    icon: <MdAssessment />,
+    roles: ["owner"],
+  },
+  {
+    name: "Audit Sumber Keuangan",
+    path: "/finance/source-audit",
+    icon: <MdAssessment />,
+    roles: ["owner"],
+  },
+  {
+    name: "Audit Biaya HPP",
+    path: "/finance/hpp-audit",
+    icon: <MdAssessment />,
     roles: ["owner"],
   },
   {
@@ -125,6 +159,12 @@ const menus = [
     path: "/settings",
     icon: <MdSettings />,
     roles: ["owner"],
+  },
+  {
+    name: "User Management",
+    path: "/users",
+    icon: <MdPeople />,
+    roles: ["owner", "admin"],
   },
 ];
 

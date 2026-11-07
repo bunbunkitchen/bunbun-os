@@ -23,8 +23,10 @@ export async function updateUserProfile(
 ) {
   const allowedRoles = [
     "owner",
+    "admin",
     "baker",
     "helper",
+    "cashier",
   ];
 
   const normalizedRole = String(
@@ -75,5 +77,43 @@ export async function updateUserProfile(
     throw error;
   }
 
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+  if (currentUser?.id === userId) {
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      console.warn("Gagal menyegarkan sesi setelah perubahan profil sendiri:", refreshError);
+    }
+  }
+
+  return data;
+}
+
+export async function inviteManagedUser({ email, fullName, role }) {
+  const normalizedRole = String(role ?? "").trim().toLowerCase();
+  const allowedRoles = ["owner", "admin", "baker", "helper", "cashier"];
+
+  if (!String(email ?? "").trim()) {
+    throw new Error("Email pengguna wajib diisi.");
+  }
+  if (!String(fullName ?? "").trim()) {
+    throw new Error("Nama pengguna wajib diisi.");
+  }
+  if (!allowedRoles.includes(normalizedRole)) {
+    throw new Error("Role pengguna tidak valid.");
+  }
+
+  const { data, error } = await supabase.functions.invoke("manage-users", {
+    body: {
+      action: "invite",
+      email: String(email).trim().toLowerCase(),
+      fullName: String(fullName).trim(),
+      role: normalizedRole,
+    },
+  });
+
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
   return data;
 }

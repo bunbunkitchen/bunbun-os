@@ -8,6 +8,7 @@ import { getAllIngredients } from "../../services/ingredientService";
 const SOURCES = [
   "Stok Pribadi Owner",
   "Bonus Supplier",
+  "Hadiah / Oleh-oleh",
   "Koreksi Stok",
   "Lainnya",
 ];
@@ -83,7 +84,7 @@ export default function StockAdditionForm({ onSave, onCancel, saving = false }) 
     if (!form.ingredientId) next.ingredientId = "Bahan baku wajib dipilih";
     if (!(Number(form.jumlah) > 0)) next.jumlah = "Jumlah harus lebih dari 0";
     if (!form.satuan.trim()) next.satuan = "Satuan wajib diisi";
-    if (!(Number(form.nilaiSatuan) > 0)) next.nilaiSatuan = "Nilai HPP harus lebih dari 0";
+    if (!(Number(form.nilaiSatuan) > 0)) next.nilaiSatuan = "Nilai acuan harus lebih dari 0";
     if (!form.sumber.trim()) next.sumber = "Sumber stok wajib dipilih";
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -148,8 +149,8 @@ export default function StockAdditionForm({ onSave, onCancel, saving = false }) 
         </label>
 
         <label className="space-y-1 text-sm font-medium text-gray-700">
-          <span>Nilai HPP per Satuan</span>
-          <Input type="number" min="0" step="1" value={form.nilaiSatuan} onChange={(e) => change("nilaiSatuan", e.target.value)} disabled={saving} placeholder="Harga wajar bahan" />
+          <span>Nilai Acuan per Satuan</span>
+          <Input type="number" min="0" step="1" value={form.nilaiSatuan} onChange={(e) => change("nilaiSatuan", e.target.value)} disabled={saving} placeholder="Referensi nilai bahan, bukan pembayaran" />
           {errors.nilaiSatuan && <span className="text-xs text-red-600">{errors.nilaiSatuan}</span>}
         </label>
 
@@ -164,12 +165,13 @@ export default function StockAdditionForm({ onSave, onCancel, saving = false }) 
 
       <label className="block space-y-1 text-sm font-medium text-gray-700">
         <span>Catatan (opsional)</span>
-        <textarea className="min-h-24 w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-amber-600" value={form.keterangan} onChange={(e) => change("keterangan", e.target.value)} disabled={saving} placeholder="Contoh: susu dari stok rumah" />
+        <textarea className="min-h-24 w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-amber-600" value={form.keterangan} onChange={(e) => change("keterangan", e.target.value)} disabled={saving} placeholder="Contoh: pemberian gula dari stok rumah atau hadiah dari teman" />
       </label>
 
       <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
-        <div>Nilai persediaan: <Currency value={totalValue} /></div>
+        <div>Total nilai acuan bahan masuk: <Currency value={totalValue} /></div>
         <div className="mt-1">Pengeluaran kas: <strong>Rp0</strong></div>
+        <p className="mt-2">Nilai acuan ini tidak mengubah harga master atau HPP resep. Ini bukan biaya pembelian maupun nilai persediaan akuntansi yang sudah disahkan. Cantumkan pemberi dan bukti penerimaan di catatan bila tersedia.</p>
       </div>
 
       <div className="flex justify-end gap-3">
